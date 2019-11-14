@@ -20,9 +20,9 @@ namespace HyperMsg.Transport.Socket
             && backgroundTask.Status != TaskStatus.Faulted
             && backgroundTask.Status != TaskStatus.Canceled;
 
-        public Task HandleTransportEventAsync(TransportEventArgs eventArgs, CancellationToken cancellationToken)
+        public Task HandleTransportEventAsync(TransportEvent @event, CancellationToken cancellationToken)
         {
-            switch (eventArgs.Event)
+            switch (@event)
             {
                 case TransportEvent.Opened:
                     return RunAsync(cancellationToken);
@@ -79,7 +79,7 @@ namespace HyperMsg.Transport.Socket
         }
 
         private async Task DoWorkAsync(CancellationToken cancellationToken)
-        {            
+        {
             while (!cancellationToken.IsCancellationRequested)
             {
                 await Task.Run(() => asyncAction(cancellationToken), cancellationToken);

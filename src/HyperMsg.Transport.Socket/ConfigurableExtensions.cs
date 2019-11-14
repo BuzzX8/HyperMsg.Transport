@@ -1,4 +1,5 @@
-﻿using System.Net;
+﻿using System;
+using System.Net;
 using System.Net.Sockets;
 
 namespace HyperMsg.Transport.Socket
@@ -8,19 +9,35 @@ namespace HyperMsg.Transport.Socket
         public static void UseSockets(this IConfigurable configurable, EndPoint endpoint)
         {
             configurable.AddSetting(nameof(EndPoint), endpoint);
-            configurable.RegisterService(typeof(ITransport), (p, s) =>
+            configurable.RegisterConfigurator((p, s) =>
             {
-                var ep = (EndPoint)s[nameof(EndPoint)];
-                var socket = new System.Net.Sockets.Socket(SocketType.Stream, ProtocolType.Tcp);
-                var proxy = new SocketProxy(socket, ep);
-
-                var receivingBuffer = (IReceivingBuffer)p.GetService(typeof(IReceivingBuffer));
-                var sendingBuffer = (ISendingBuffer)p.GetService(typeof(ISendingBuffer));
-                var transport = new SocketTransport(proxy, receivingBuffer.Writer, receivingBuffer.FlushAsync);
-                sendingBuffer.FlushRequested += transport.HandleFlushRequestAsync;
-
-                return transport;
+                var endPoint = (EndPoint)s[nameof(EndPoint)];
+                var socket = CreateDefaultSocket(endPoint);
+                RegisterHandlers(p, socket);
             });
+        }
+
+        private static void RegisterHandlers(IServiceProvider serviceProvider, ISocket socket)
+        {
+            var receivingBuffer = (IReceivingBuffer)serviceProvider.GetService(typeof(IReceivingBuffer));
+            var transmittingBuffer = (ITransmittingBuffer)serviceProvider.GetService(typeof(ITransmittingBuffer));
+            var messageSender = (IMessageSender)serviceProvider.GetService(typeof(IMessageSender));
+            var handlerRegistry = (IMessageHandlerRegistry)serviceProvider.GetService(typeof(IMessageHandlerRegistry));
+
+            var commandHandler = new SocketCommandHandler(socket, messageSender);
+            var dataHandler = new SocketDataHandler(socket, receivingBuffer);
+            var worker = new TransportWorker(dataHandler.FetchSocketDataAsync);
+
+            handlerRegistry.Register<TransportCommand>(commandHandler.HandleCommandAsync);
+            transmittingBuffer.FlushRequested += dataHandler.HandleBufferFlushAsync;
+            handlerRegistry.Register<TransportEvent>(worker.HandleTransportEventAsync);
+        }
+
+        private static ISocket CreateDefaultSocket(EndPoint endPoint)
+        {            
+            var socket = new System.Net.Sockets.Socket(SocketType.Stream, ProtocolType.Tcp);
+
+            return new SocketProxy(socket, endPoint);
         }
     }
 }
