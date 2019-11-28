@@ -1,8 +1,9 @@
 ﻿using System;
+using System.Buffers;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace HyperMsg.Transport.Socket
+namespace HyperMsg.Socket
 {
     public class SocketDataHandler
     {
@@ -15,18 +16,14 @@ namespace HyperMsg.Transport.Socket
             this.receivingBuffer = receivingBuffer ?? throw new ArgumentNullException(nameof(receivingBuffer));
         }
 
-        public Task FetchSocketDataAsync(CancellationToken cancellationToken)
-        {
-            DoSocketReading();
-            return receivingBuffer.FlushAsync(cancellationToken);
-        }
+        private IBufferWriter<byte> BufferWriter => receivingBuffer.Writer;
 
-        private void DoSocketReading()
+        public async Task FetchSocketDataAsync(CancellationToken cancellationToken)
         {
-            var memory = receivingBuffer.Writer.GetMemory();
-            var bytesReaded = socket.Stream.Read(memory.Span);
-
-            receivingBuffer.Writer.Advance(bytesReaded);
+            var memory = BufferWriter.GetMemory();
+            var bytesReaded = await socket.Stream.ReadAsync(memory);
+            BufferWriter.Advance(bytesReaded);
+            await receivingBuffer.FlushAsync(cancellationToken);
         }
 
         public async Task HandleBufferFlushAsync(IBufferReader<byte> bufferReader, CancellationToken cancellationToken)

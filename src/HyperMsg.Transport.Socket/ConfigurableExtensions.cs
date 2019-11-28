@@ -2,7 +2,7 @@
 using System.Net;
 using System.Net.Sockets;
 
-namespace HyperMsg.Transport.Socket
+namespace HyperMsg.Socket
 {
     public static class ConfigurableExtensions
     {

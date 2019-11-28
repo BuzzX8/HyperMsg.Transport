@@ -7,7 +7,7 @@ using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace HyperMsg.Transport.Socket
+namespace HyperMsg.Socket
 {
     public class SocketProxy : ISocket, IDisposable
     {
