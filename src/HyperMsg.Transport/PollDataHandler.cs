@@ -49,6 +49,12 @@ namespace HyperMsg.Transport
             {
                 var memory = Writer.GetMemory();
                 var bytesReceived = receiver.Receive(memory);
+
+                if (bytesReceived == 0)
+                {
+                    return;
+                }
+
                 Writer.Advance(bytesReceived);
                 buffer.FlushAsync(CancellationToken.None).GetAwaiter().GetResult();
             }

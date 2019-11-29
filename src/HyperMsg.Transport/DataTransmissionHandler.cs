@@ -16,6 +16,12 @@ namespace HyperMsg.Transport
         public async Task HandleBufferFlushAsync(IBufferReader<byte> reader, CancellationToken cancellationToken)
         {
             var buffer = reader.Read();
+
+            if (buffer.Length == 0)
+            {
+                return;
+            }
+
             var enumerator = buffer.GetEnumerator();
 
             while (enumerator.MoveNext())

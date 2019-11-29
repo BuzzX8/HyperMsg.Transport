@@ -22,6 +22,8 @@ namespace HyperMsg.Socket
             this.endpoint = endpoint ?? throw new ArgumentNullException(nameof(endpoint));
         }
 
+        public System.Net.Sockets.Socket InnerSocket => socket;
+
         public bool ValidateAllCertificates { get; }
 
         public Stream Stream => GetStream();
