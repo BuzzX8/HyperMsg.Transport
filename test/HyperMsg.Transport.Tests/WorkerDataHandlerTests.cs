@@ -5,7 +5,7 @@ using Xunit;
 
 namespace HyperMsg
 {
-    public class TransportWorkerTests //: IDisposable
+    public class WorkerDataHandlerTests //: IDisposable
     {
         //private TransportWorker worker;
         //private readonly TimeSpan waitTimeout = TimeSpan.FromSeconds(2);

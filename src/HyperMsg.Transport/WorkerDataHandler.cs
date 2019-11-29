@@ -2,16 +2,16 @@
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace HyperMsg.Socket
+namespace HyperMsg.Transport
 {
-    public class TransportWorker : IDisposable
+    public class WorkerDataHandler : IDisposable
     {
         private readonly AsyncAction asyncAction;
 
         private CancellationTokenSource tokenSource;
         private Task backgroundTask;
 
-        public TransportWorker(AsyncAction asyncAction)
+        public WorkerDataHandler(AsyncAction asyncAction)
         {
             this.asyncAction = asyncAction ?? throw new ArgumentNullException(nameof(asyncAction));
         }

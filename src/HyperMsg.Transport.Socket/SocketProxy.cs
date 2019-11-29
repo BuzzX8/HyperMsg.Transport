@@ -1,4 +1,5 @@
-﻿using System;
+﻿using HyperMsg.Transport;
+using System;
 using System.IO;
 using System.Net;
 using System.Net.Security;
@@ -9,7 +10,7 @@ using System.Threading.Tasks;
 
 namespace HyperMsg.Socket
 {
-    public class SocketProxy : ISocket, IDisposable
+    public class SocketProxy : IConnection, ITransmitter, IReceiver, IDisposable
     {
         private readonly System.Net.Sockets.Socket socket;        
         private readonly EndPoint endpoint;
@@ -27,15 +28,39 @@ namespace HyperMsg.Socket
 
         public bool IsConnected => socket.Connected;
 
+        #region IConnection
+
         public void Connect() => socket.Connect(endpoint);
 
-        public Task ConnectAsync(CancellationToken token) => Task.Run((Action)Connect);
+        public Task ConnectAsync(CancellationToken cancellationToken) => socket.ConnectAsync(endpoint);
 
-        public void Disconnect() => socket.Disconnect(false);
+        public void Disconnect() => socket.Disconnect(true);
 
-        public Task DisconnectAsync(CancellationToken token) => Task.Run((Action)Disconnect);
+        public Task DisconnectAsync(CancellationToken cancellationToken)
+        {
+            Disconnect();
+            return Task.CompletedTask;
+        }
 
-        public void Dispose() => Disconnect();
+        #endregion
+
+        #region ITransmitter
+
+        public void Transmit(ReadOnlyMemory<byte> data) => socket.Send(data.Span);
+
+        public Task TransmitAsync(ReadOnlyMemory<byte> data, CancellationToken cancellationToken) => socket.SendAsync(data, SocketFlags.None, cancellationToken).AsTask();
+
+        #endregion
+
+        #region IReceiver
+
+        public int Receive(Memory<byte> buffer) => socket.Receive(buffer.Span);
+
+        public Task<int> ReceiveAsync(Memory<byte> buffer, CancellationToken cancellationToken) => socket.ReceiveAsync(buffer, SocketFlags.None, cancellationToken).AsTask();
+
+        #endregion
+
+        public void Dispose() => socket.Dispose();
 
         public void SetTls()
         {

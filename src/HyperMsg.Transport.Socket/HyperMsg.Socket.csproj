@@ -6,6 +6,10 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="HyperMsg" Version="1.0.0" />
+    <PackageReference Include="HyperMsg" Version="1.0.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\HyperMsg.Transport\HyperMsg.Transport.csproj" />
   </ItemGroup>
 </Project>
