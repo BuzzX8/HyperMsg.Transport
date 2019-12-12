@@ -46,6 +46,11 @@ namespace HyperMsg.Socket
 
         private void AdvanceAndFlushBuffer()
         {
+            if (socketEventArgs.BytesTransferred == 0)
+            {
+                return;
+            }
+          
             buffer.Writer.Advance(socketEventArgs.BytesTransferred);
             buffer.FlushAsync(CancellationToken.None).GetAwaiter().GetResult();
         }
