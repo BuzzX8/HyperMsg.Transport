@@ -40,5 +40,16 @@ namespace HyperMsg.Transport
                 handlerRegistry.Register<TransportEvent>(dataHandler.Handle);
             });
         }
+
+        public static void UseWorkerDataHandler(this IConfigurable configurable, AsyncAction asyncAction)
+        {
+            configurable.AddSetting(nameof(asyncAction), asyncAction);
+            configurable.RegisterConfigurator((p, s) =>
+            {
+                var worker = new WorkerDataHandler((AsyncAction)s[nameof(asyncAction)]);                
+                var handlerRegistry = (IMessageHandlerRegistry)p.GetService(typeof(IMessageHandlerRegistry));
+                handlerRegistry.Register<TransportEvent>(worker.HandleTransportEventAsync);
+            });
+        }
     }
 }

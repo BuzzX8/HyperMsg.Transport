@@ -2,6 +2,8 @@
 using System;
 using System.Net;
 using System.Net.Sockets;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace HyperMsg.Socket
 {
@@ -9,19 +11,26 @@ namespace HyperMsg.Socket
     {
         private static readonly TimeSpan DefaultPollInterval = TimeSpan.FromMilliseconds(200);
 
-        public static void UseSockets(this IConfigurable configurable, EndPoint endpoint, bool usePoll = false)
+        public static void UseSockets(this IConfigurable configurable, EndPoint endpoint, ReceiveMode receiveMode = ReceiveMode.Polling)
         {
             var socket = CreateDefaultSocket(endpoint);
             configurable.UseConnection(socket);
             configurable.UseTransmitter(socket);
 
-            if (usePoll)
+            switch(receiveMode)
             {
-                configurable.UsePollDataHandler(socket, DefaultPollInterval);
-                return;
-            }
+                case ReceiveMode.Polling:
+                    configurable.UsePollDataHandler(socket, DefaultPollInterval);
+                    break;
 
-            configurable.UseSocketObserver(socket.InnerSocket);
+                case ReceiveMode.Reactive:
+                    configurable.UseSocketObserver(socket.InnerSocket);
+                    break;
+
+                case ReceiveMode.Worker:
+                    RegisterSocketWorker(configurable, socket);
+                    break;
+            }
         }
 
         private static void UseSocketObserver(this IConfigurable configurable, System.Net.Sockets.Socket socket)
@@ -36,11 +45,39 @@ namespace HyperMsg.Socket
             });
         }
 
+        private static void RegisterSocketWorker(IConfigurable configurable, SocketProxy socket)
+        {
+            configurable.RegisterConfigurator((p, s) =>
+            {
+                var buffer = (IReceivingBuffer)p.GetService(typeof(IReceivingBuffer));
+                var workItem = new SocketWorkItem(buffer, socket);
+                configurable.UseWorkerDataHandler(workItem.FetchSocketDataAsync);
+            });
+        }
+
         private static SocketProxy CreateDefaultSocket(EndPoint endPoint)
         {            
             var socket = new System.Net.Sockets.Socket(SocketType.Stream, ProtocolType.Tcp);
 
             return new SocketProxy(socket, endPoint);
+        }
+    }
+
+    internal class SocketWorkItem
+    {
+        IBuffer buffer;
+        IReceiver receiver;
+
+        internal SocketWorkItem(IBuffer buffer, IReceiver receiver)
+        {
+            this.buffer = buffer;
+            this.receiver = receiver;
+        }
+
+        internal async Task FetchSocketDataAsync(CancellationToken cancellationToken)
+        {
+            var memory = buffer.Writer.GetMemory();
+            await receiver.ReceiveAsync(memory, cancellationToken);
         }
     }
 }
