@@ -2,15 +2,15 @@
 using System.Net.Sockets;
 using System.Threading;
 
-namespace HyperMsg.Socket
+namespace HyperMsg.Transport.Sockets
 {
-    public class SocketObserver
+    internal class SocketDataObserver
     {
         private readonly IBuffer buffer;
-        private readonly System.Net.Sockets.Socket socket;
+        private readonly Socket socket;
         private readonly SocketAsyncEventArgs socketEventArgs;
 
-        public SocketObserver(IBuffer buffer, System.Net.Sockets.Socket socket)
+        public SocketDataObserver(IBuffer buffer, Socket socket)
         {
             this.buffer = buffer ?? throw new ArgumentNullException(nameof(buffer));
             this.socket = socket ?? throw new ArgumentNullException(nameof(socket));
@@ -18,17 +18,7 @@ namespace HyperMsg.Socket
             socketEventArgs.Completed += DataReceivingCompleted;
         }
 
-        public void Handle(TransportEvent transportEvent)
-        {
-            switch (transportEvent)
-            {
-                case TransportEvent.Opened:
-                    StartListening();
-                    break;
-            }
-        }
-
-        private void StartListening()
+        internal void Run()
         {
             ResetBuffer();
             while (!socket.ReceiveAsync(socketEventArgs))
@@ -50,7 +40,7 @@ namespace HyperMsg.Socket
             {
                 return;
             }
-          
+
             buffer.Writer.Advance(socketEventArgs.BytesTransferred);
             buffer.FlushAsync(CancellationToken.None).GetAwaiter().GetResult();
         }

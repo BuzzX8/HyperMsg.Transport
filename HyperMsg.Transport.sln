@@ -1,15 +1,15 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 15
-VisualStudioVersion = 15.0.28307.852
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.29806.167
 MinimumVisualStudioVersion = 15.0.26124.0
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{25112750-8562-4F88-BEFD-A52338FFD340}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "test", "test", "{4976C5BD-D36D-4DB8-A18B-8B59923F6BF2}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "HyperMsg.Socket", "src\HyperMsg.Transport.Socket\HyperMsg.Socket.csproj", "{38225F92-E5F8-4D43-8492-A88F40B8FBE8}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "HyperMsg.Transport.Sockets", "src\HyperMsg.Transport.Sockets\HyperMsg.Transport.Sockets.csproj", "{38225F92-E5F8-4D43-8492-A88F40B8FBE8}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "HyperMsg.Socket.Integration", "test\HyperMsg.Socket.Integration\HyperMsg.Socket.Integration.csproj", "{2DEE2996-187D-4E63-8719-6001D76171EB}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "HyperMsg.Transport.Sockets.Tests", "test\HyperMsg.Transport.Sockets.Tests\HyperMsg.Transport.Sockets.Tests.csproj", "{2DEE2996-187D-4E63-8719-6001D76171EB}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "HyperMsg.Transport", "src\HyperMsg.Transport\HyperMsg.Transport.csproj", "{9DF6FCDA-977F-4856-9EAB-8F5150D72A4C}"
 EndProject

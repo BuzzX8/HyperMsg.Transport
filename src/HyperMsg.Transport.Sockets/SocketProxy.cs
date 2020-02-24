@@ -1,5 +1,4 @@
-﻿using HyperMsg.Transport;
-using System;
+﻿using System;
 using System.IO;
 using System.Net;
 using System.Net.Security;
@@ -8,43 +7,86 @@ using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace HyperMsg.Socket
+namespace HyperMsg.Transport.Sockets
 {
-    public class SocketProxy : IConnection, ITransmitter, IReceiver, IDisposable
+    internal sealed class SocketProxy : IPort, ITransmitter, IReceiver, IDisposable
     {
-        private readonly System.Net.Sockets.Socket socket;        
+        private readonly Socket socket;
         private readonly EndPoint endpoint;
         private Stream stream;
 
-        public SocketProxy(System.Net.Sockets.Socket socket, EndPoint endpoint)
+        public SocketProxy(Socket socket, EndPoint endpoint)
         {
             this.socket = socket ?? throw new ArgumentNullException(nameof(socket));
-            this.endpoint = endpoint ?? throw new ArgumentNullException(nameof(endpoint));
+            this.endpoint = endpoint;
         }
 
-        public System.Net.Sockets.Socket InnerSocket => socket;
+        public Socket InnerSocket => socket;
 
         public bool ValidateAllCertificates { get; }
 
         public Stream Stream => GetStream();
 
-        public bool IsConnected => socket.Connected;
+        public bool IsOpen => socket.Connected;
 
-        #region IConnection
+        #region IPort
 
-        public void Connect() => socket.Connect(endpoint);
-
-        public Task ConnectAsync(CancellationToken cancellationToken) => socket.ConnectAsync(endpoint);
-
-        public void Disconnect() => socket.Disconnect(true);
-
-        public Task DisconnectAsync(CancellationToken cancellationToken)
+        public void Open()
         {
-            Disconnect();
+            socket.Connect(endpoint);
+            Connected?.Invoke();
+        }
+
+        public async Task OpenAsync(CancellationToken cancellationToken)
+        {
+            await socket.ConnectAsync(endpoint);
+            Connected?.Invoke();
+        }
+
+        public void Close()
+        {
+            if (!IsOpen)
+            {
+                return;
+            }
+
+            socket.Shutdown(SocketShutdown.Both);
+            socket.Close();
+        }
+
+        public Task CloseAsync(CancellationToken cancellationToken)
+        {
+            Close();
             return Task.CompletedTask;
         }
 
         #endregion
+
+        internal async Task TransmitAsync(IBufferReader<byte> reader, CancellationToken cancellationToken)
+        {
+            ThrowIfDisconnected();
+            var data = reader.Read();
+
+            if (data.Length == 0)
+            {
+                return;
+            }
+
+            if (data.IsSingleSegment)
+            {
+                await TransmitAsync(data.First, cancellationToken);
+                reader.Advance((int)data.Length);
+                return;
+            }
+
+            var enumerator = data.GetEnumerator();
+
+            while(enumerator.MoveNext())
+            {
+                await TransmitAsync(enumerator.Current, cancellationToken);
+                reader.Advance(enumerator.Current.Length);
+            }
+        }
 
         #region ITransmitter
 
@@ -62,7 +104,7 @@ namespace HyperMsg.Socket
 
         #endregion
 
-        public void Dispose() => socket.Dispose();
+        public void Dispose() => Close();
 
         public void SetTls()
         {
@@ -75,7 +117,7 @@ namespace HyperMsg.Socket
             {
                 return;
             }
-            
+
             var sslStream = new SslStream(stream, false, ValidateRemoteCertificate);
             sslStream.AuthenticateAsClient(endpoint.ToString());
             stream = sslStream;
@@ -103,6 +145,16 @@ namespace HyperMsg.Socket
 
             return stream;
         }
+
+        private void ThrowIfDisconnected()
+        {
+            if (!IsOpen)
+            {
+                throw new InvalidOperationException();
+            }
+        }
+
+        internal event Action Connected;
 
         public event EventHandler<RemoteCertificateValidationEventArgs> RemoteCertificateValidationRequired;
     }

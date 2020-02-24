@@ -8,14 +8,14 @@ namespace HyperMsg.Transport
     public class ConnectionCommandHandlerTests
     {
         private readonly ConnectionCommandHandler commandHandler;
-        private readonly IConnection connection;
+        private readonly IPort connection;
         private readonly IMessageSender messageSender;
 
         private readonly CancellationTokenSource tokenSource;
 
         public ConnectionCommandHandlerTests()
         {
-            connection = A.Fake<IConnection>();
+            connection = A.Fake<IPort>();
             messageSender = A.Fake<IMessageSender>();
             commandHandler = new ConnectionCommandHandler(connection, messageSender);
             tokenSource = new CancellationTokenSource();
@@ -26,7 +26,7 @@ namespace HyperMsg.Transport
         {
             await commandHandler.HandleAsync(TransportCommand.Open, tokenSource.Token);
 
-            A.CallTo(() => connection.ConnectAsync(tokenSource.Token)).MustHaveHappened();
+            A.CallTo(() => connection.OpenAsync(tokenSource.Token)).MustHaveHappened();
         }
 
         [Fact]
@@ -34,7 +34,7 @@ namespace HyperMsg.Transport
         {
             await commandHandler.HandleAsync(TransportCommand.Close, tokenSource.Token);
 
-            A.CallTo(() => connection.DisconnectAsync(tokenSource.Token)).MustHaveHappened();
+            A.CallTo(() => connection.CloseAsync(tokenSource.Token)).MustHaveHappened();
         }
 
         [Theory]
