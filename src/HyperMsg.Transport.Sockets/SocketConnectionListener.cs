@@ -9,7 +9,7 @@ namespace HyperMsg.Transport.Sockets
     /// <summary>
     /// Listener for incoming socket connections.
     /// </summary>
-    public class SocketConnectionListener : IPort, IConnectionHandlerRegistry
+    public sealed class SocketConnectionListener : IPort, IConnectionHandlerRegistry, IDisposable
     {
         private readonly Func<IBufferContext> contextProvider;
         private readonly Socket listeningSocket;
@@ -28,14 +28,16 @@ namespace HyperMsg.Transport.Sockets
             eventArgs = new SocketAsyncEventArgs();
             eventArgs.Completed += OnSocketAccepted;
             listeningSocket = SocketFactory.CreateTcpSocket();
+            IsOpen = false;
         }
 
-        public bool IsOpen => listeningSocket.Connected;
+        public bool IsOpen { get; private set; }
 
         public void Open()
         {
             listeningSocket.Bind(endPoint);
             listeningSocket.Listen(backlog);
+            IsOpen = true;
             AcceptSocketAsync();
         }
 
@@ -51,9 +53,9 @@ namespace HyperMsg.Transport.Sockets
             {
                 return;
             }
-
-            listeningSocket.Shutdown(SocketShutdown.Both);
+            
             listeningSocket.Close();
+            IsOpen = false;
         }
 
         public Task CloseAsync(CancellationToken cancellationToken)
@@ -65,6 +67,8 @@ namespace HyperMsg.Transport.Sockets
         public void Register(Action<IAcceptedConnection> handler) => handlers += handler;
 
         public void Register(AsyncAction<IAcceptedConnection> handler) => asyncHandlers += handler;
+
+        public void Dispose() => Close();
 
         private void OnSocketAccepted(object sender, SocketAsyncEventArgs eventArgs)
         {
@@ -96,10 +100,11 @@ namespace HyperMsg.Transport.Sockets
 
         private void AcceptSocketAsync()
         {
+            eventArgs.AcceptSocket = null;
             while (!listeningSocket.AcceptAsync(eventArgs))
             {
                 HandleAcceptedSocket(eventArgs.AcceptSocket, false);
-            }
+            }            
         }
     }
 }

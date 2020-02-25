@@ -1,4 +1,5 @@
-﻿using System;
+﻿using HyperMsg.Transport.Sockets.Properties;
+using System;
 using System.Net.Sockets;
 
 namespace HyperMsg.Transport.Sockets
@@ -20,7 +21,7 @@ namespace HyperMsg.Transport.Sockets
         {
             if (!socket.Connected)
             {
-                throw new InvalidOperationException();
+                throw new InvalidOperationException(Resources.AcceptedSocketConnection_SocketClosedError);
             }
 
             var bufferContext = bufferContextProvider.Invoke();
@@ -31,7 +32,10 @@ namespace HyperMsg.Transport.Sockets
 
         public void Dispose()
         {
-            socket.Shutdown(SocketShutdown.Both);
+            if (socket.Connected)
+            {
+                socket.Shutdown(SocketShutdown.Both);
+            }
             socket.Close();
         }
     }
