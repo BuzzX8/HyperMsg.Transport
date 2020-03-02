@@ -5,8 +5,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="HyperMsg" Version="0.9.3-alpha" />
-    <PackageReference Include="HyperMsg.Extensions" Version="0.9.3-alpha" />
+    <PackageReference Include="HyperMsg" Version="0.9.4-alpha" />
+    <PackageReference Include="HyperMsg.Extensions" Version="0.9.4-alpha" />
   </ItemGroup>
 
 </Project>
