@@ -9,16 +9,15 @@ using System.Threading.Tasks;
 
 namespace HyperMsg.Transport.Sockets
 {
-    internal sealed class SocketProxy : IPort, ITransmitter, IReceiver, IDisposable
+    internal sealed class SocketProxy : IPort<EndPoint>, ITransmitter, IReceiver, IDisposable
     {
-        private readonly Socket socket;
-        private readonly EndPoint endpoint;
+        private readonly Socket socket;        
         private Stream stream;
 
-        public SocketProxy(Socket socket, EndPoint endpoint)
+        public SocketProxy(Socket socket, EndPoint endpoint = null)
         {
             this.socket = socket ?? throw new ArgumentNullException(nameof(socket));
-            this.endpoint = endpoint;
+            EndPoint = endpoint;
         }
 
         public Socket InnerSocket => socket;
@@ -31,16 +30,21 @@ namespace HyperMsg.Transport.Sockets
 
         #region IPort
 
+        public EndPoint EndPoint { get; set; }
+
         public void Open()
         {
-            socket.Connect(endpoint);
+            EnsureEndpointSet();
+            socket.Connect(EndPoint);
             Connected?.Invoke();
         }
 
-        public async Task OpenAsync(CancellationToken cancellationToken)
+        public Task OpenAsync(CancellationToken cancellationToken)
         {
-            await socket.ConnectAsync(endpoint);
+            EnsureEndpointSet();
+            socket.Connect(EndPoint);
             Connected?.Invoke();
+            return Task.CompletedTask;
         }
 
         public void Close()
@@ -119,8 +123,16 @@ namespace HyperMsg.Transport.Sockets
             }
 
             var sslStream = new SslStream(stream, false, ValidateRemoteCertificate);
-            sslStream.AuthenticateAsClient(endpoint.ToString());
+            sslStream.AuthenticateAsClient(EndPoint.ToString());
             stream = sslStream;
+        }
+
+        private void EnsureEndpointSet()
+        {
+            if (EndPoint == null)
+            {
+                throw new InvalidOperationException();
+            }
         }
 
         private bool ValidateRemoteCertificate(object sender, X509Certificate certificate, X509Chain chain, SslPolicyErrors sslPolicyErrors)

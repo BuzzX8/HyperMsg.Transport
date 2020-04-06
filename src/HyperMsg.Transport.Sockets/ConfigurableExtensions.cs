@@ -4,19 +4,17 @@ namespace HyperMsg.Transport.Sockets
 {
     public static class ConfigurableExtensions
     {
-        private static readonly string EndPointSettingName = typeof(EndPoint).FullName;
-
-        public static void UseClientSocket(this IConfigurable configurable, EndPoint endpoint)
+        public static void AddSocketTransceiver(this IConfigurable configurable, EndPoint endpoint)
         {
-            configurable.AddSetting(EndPointSettingName, endpoint);
-            configurable.RegisterConfigurator((p, s) =>
+            configurable.AddInitializer(provider =>
             {
-                var context = p.GetRequiredService<IBufferContext>();
-                var socket = CreateDefaultSocket(s.Get<EndPoint>(EndPointSettingName));
-                var observer = new SocketDataObserver(context.ReceivingBuffer, socket.InnerSocket);
-                socket.Connected += observer.Run;
-                configurable.UsePort(socket);
-                configurable.UseTransmitter(socket);
+                var context = provider.GetRequiredService<IBufferContext>();
+                var socket = CreateDefaultSocket(endpoint);
+                context.AttachSocket(socket);
+                configurable.AddService<IPort>(socket);
+                configurable.AddService<IPort<EndPoint>>(socket);
+                configurable.AddTransportCommandHandler(socket);
+                configurable.AddDataTransmissionCommandHandler(socket);
             });
         }
 
