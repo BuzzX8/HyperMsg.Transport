@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Buffers;
 using System.Threading;
 using System.Threading.Tasks;
 using Xunit;
@@ -17,7 +16,7 @@ namespace HyperMsg.Transport.Sockets
         {
             acceptEvent = new ManualResetEventSlim();
             waitTimeout = TimeSpan.FromSeconds(2);
-            ConnectionListener.Register(context =>
+            ConnectionListener.Subscribe(context =>
             {
                 acceptedContext = context.Acquire();
                 acceptEvent.Set();
@@ -32,21 +31,10 @@ namespace HyperMsg.Transport.Sockets
             Assert.NotNull(acceptedContext);
         }
 
-        [Fact(Skip = "For manual run")]
-        public async Task Close_Disables_Data_Transmission_From_Client_Side()
-        {
-            await OpenConnectionAndAcceptContext();
-
-            ClientConnection.Close();
-
-            ClientContext.TransmittingBuffer.Writer.Write(Guid.NewGuid().ToByteArray());
-            await Assert.ThrowsAsync<InvalidOperationException>(() => ClientContext.TransmittingBuffer.FlushAsync(default));
-        }
-
         private async Task OpenConnectionAndAcceptContext()
         {
             await ConnectionListener.OpenAsync(default);
-            await ClientConnection.OpenAsync(default);
+            await MessagingContext.Sender.SendAsync(TransportCommand.Open, default);
             acceptEvent.Wait(waitTimeout);
         }
     }

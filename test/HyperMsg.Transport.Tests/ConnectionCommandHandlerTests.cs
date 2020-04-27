@@ -1,4 +1,5 @@
 ﻿using FakeItEasy;
+using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Xunit;
@@ -8,16 +9,16 @@ namespace HyperMsg.Transport
     public class ConnectionCommandHandlerTests
     {
         private readonly ConnectionCommandHandler commandHandler;
-        private readonly IPort connection;
-        private readonly IMessageSender messageSender;
+        private readonly IMessagingContext messagingContext;
+        private readonly IPort port;        
 
         private readonly CancellationTokenSource tokenSource;
 
         public ConnectionCommandHandlerTests()
         {
-            connection = A.Fake<IPort>();
-            messageSender = A.Fake<IMessageSender>();
-            commandHandler = new ConnectionCommandHandler(connection, messageSender);
+            port = A.Fake<IPort>();
+            messagingContext = A.Fake<IMessagingContext>();
+            commandHandler = new ConnectionCommandHandler(messagingContext, port);
             tokenSource = new CancellationTokenSource();
         }
 
@@ -26,7 +27,7 @@ namespace HyperMsg.Transport
         {
             await commandHandler.HandleAsync(TransportCommand.Open, tokenSource.Token);
 
-            A.CallTo(() => connection.OpenAsync(tokenSource.Token)).MustHaveHappened();
+            A.CallTo(() => port.OpenAsync(tokenSource.Token)).MustHaveHappened();
         }
 
         [Fact]
@@ -34,7 +35,7 @@ namespace HyperMsg.Transport
         {
             await commandHandler.HandleAsync(TransportCommand.Close, tokenSource.Token);
 
-            A.CallTo(() => connection.CloseAsync(tokenSource.Token)).MustHaveHappened();
+            A.CallTo(() => port.CloseAsync(tokenSource.Token)).MustHaveHappened();
         }
 
         [Theory]
@@ -42,11 +43,11 @@ namespace HyperMsg.Transport
         [InlineData(TransportCommand.Open, TransportEvent.Opened)]
         [InlineData(TransportCommand.Close, TransportEvent.Closing)]
         [InlineData(TransportCommand.Close, TransportEvent.Closed)]        
-        private async Task HandleCommandAsync_Emits_Correct_Event(TransportCommand command, TransportEvent @event)
+        public async Task HandleCommandAsync_Emits_Correct_Event(TransportCommand command, TransportEvent @event)
         {
             await commandHandler.HandleAsync(command, tokenSource.Token);
 
-            A.CallTo(() => messageSender.SendAsync(@event, tokenSource.Token)).MustHaveHappened();
+            A.CallTo(() => messagingContext.Sender.SendAsync(@event, tokenSource.Token)).MustHaveHappened();
         }
     }
 }

@@ -10,6 +10,7 @@ namespace HyperMsg.Transport.Sockets
     public class DataTransmissionTests : SocketFixtureBase
     {
         private IConnectionContext acceptedConnection;
+        
         private readonly ManualResetEventSlim acceptEvent;
         private readonly ManualResetEventSlim transmitEvent;
         private readonly TimeSpan waitTimeout;
@@ -19,7 +20,7 @@ namespace HyperMsg.Transport.Sockets
             acceptEvent = new ManualResetEventSlim();
             transmitEvent = new ManualResetEventSlim();
             waitTimeout = TimeSpan.FromSeconds(2);
-            ConnectionListener.Register(ac =>
+            ConnectionListener.Subscribe(ac =>
             {
                 acceptedConnection = ac.Acquire();
                 acceptEvent.Set();
@@ -33,44 +34,17 @@ namespace HyperMsg.Transport.Sockets
             var actualData = default(byte[]);
 
             ConnectionListener.Open();
-            await ClientConnection.OpenAsync(default);
+            await MessagingContext.Sender.SendAsync(TransportCommand.Open, default);
             acceptEvent.Wait(waitTimeout);
             Assert.NotNull(acceptedConnection);
 
-            acceptedConnection.BufferContext.ReceivingBuffer.FlushRequested += (reader, token) =>
+            MessagingContext.Observable.OnBufferReceivedData(buffer =>
             {
-                actualData = reader.Read().ToArray();
+                actualData = buffer.Reader.Read().ToArray();
                 transmitEvent.Set();
-                return Task.CompletedTask;
-            };
+            });
 
-            ClientContext.TransmittingBuffer.Writer.Write(expectedData);
-            await ClientContext.TransmittingBuffer.FlushAsync(default);
-            transmitEvent.Wait(waitTimeout);
-
-            Assert.Equal(expectedData, actualData);
-        }
-
-        [Fact(Skip = "For manual run")]
-        public async Task Receives_Data_From_Accepted_Socket()
-        {
-            var expectedData = Guid.NewGuid().ToByteArray();
-            var actualData = default(byte[]);
-
-            ClientContext.ReceivingBuffer.FlushRequested += (reader, token) =>
-            {
-                actualData = reader.Read().ToArray();
-                transmitEvent.Set();
-                return Task.CompletedTask;
-            };
-
-            ConnectionListener.Open();
-            await ClientConnection.OpenAsync(default);
-            acceptEvent.Wait(waitTimeout);
-            Assert.NotNull(acceptedConnection);
-
-            acceptedConnection.BufferContext.TransmittingBuffer.Writer.Write(expectedData);            
-            await acceptedConnection.BufferContext.TransmittingBuffer.FlushAsync(default);
+            await acceptedConnection.Transmitter.TransmitAsync(expectedData, default);            
             transmitEvent.Wait(waitTimeout);
 
             Assert.Equal(expectedData, actualData);

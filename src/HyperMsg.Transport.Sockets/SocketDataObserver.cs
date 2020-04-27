@@ -1,30 +1,38 @@
 ﻿using System;
 using System.Net.Sockets;
-using System.Threading;
 
 namespace HyperMsg.Transport.Sockets
 {
-    internal class SocketDataObserver
+    internal class SocketDataObserver : IDisposable
     {
-        private readonly IBuffer buffer;
-        private readonly Socket socket;
-        private readonly SocketAsyncEventArgs socketEventArgs;
+        private readonly IMessageSender messageSender;
+        private readonly IBuffer receivingBuffer;
+        private readonly IDisposable subscription;
 
-        public SocketDataObserver(IBuffer buffer, Socket socket)
+        private readonly Socket socket;
+        private readonly SocketAsyncEventArgs socketEventArgs;        
+
+        public SocketDataObserver(IMessagingContext messagingContext, IBuffer receivingBuffer, Socket socket)
         {
-            this.buffer = buffer ?? throw new ArgumentNullException(nameof(buffer));
+            messageSender = messagingContext.Sender;
+            this.receivingBuffer = receivingBuffer ?? throw new ArgumentNullException(nameof(receivingBuffer));            
+            subscription = messagingContext.Observable.Subscribe<TransportEvent>(HandleTransportEvent);
+
             this.socket = socket ?? throw new ArgumentNullException(nameof(socket));
             socketEventArgs = new SocketAsyncEventArgs();
             socketEventArgs.Completed += DataReceivingCompleted;
         }
 
-        internal void Run()
+        private void HandleTransportEvent(TransportEvent transportEvent)
         {
-            ResetBuffer();
-            while (!socket.ReceiveAsync(socketEventArgs))
+            if (transportEvent == TransportEvent.Opened)
             {
-                AdvanceAndFlushBuffer();
                 ResetBuffer();
+                while (!socket.ReceiveAsync(socketEventArgs))
+                {
+                    AdvanceAndFlushBuffer();
+                    ResetBuffer();
+                }
             }
         }
 
@@ -41,14 +49,20 @@ namespace HyperMsg.Transport.Sockets
                 return;
             }
 
-            buffer.Writer.Advance(socketEventArgs.BytesTransferred);
-            buffer.FlushAsync(CancellationToken.None).GetAwaiter().GetResult();
+            receivingBuffer.Writer.Advance(socketEventArgs.BytesTransferred);
+            messageSender.BufferReceivedData(receivingBuffer);
         }
 
         private void ResetBuffer()
         {
-            var memory = buffer.Writer.GetMemory();
+            var memory = receivingBuffer.Writer.GetMemory();
             socketEventArgs.SetBuffer(memory);
+        }
+
+        public void Dispose()
+        {
+            socketEventArgs.Dispose();
+            subscription.Dispose();
         }
     }
 }

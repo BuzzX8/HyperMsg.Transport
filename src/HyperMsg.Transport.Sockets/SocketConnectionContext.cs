@@ -1,32 +1,27 @@
-﻿using System;
-using System.Net.Sockets;
+﻿using System.Net.Sockets;
 
 namespace HyperMsg.Transport.Sockets
 {
     internal class SocketConnectionContext : IConnectionContext
     {
         private readonly Socket socket;
-        private readonly SocketDataObserver socketObserver;
+        
+        private readonly SocketTransceivingProxy transceivingProxy;
 
-        internal SocketConnectionContext(IBufferContext bufferContext, Socket socket)
-        {
-            BufferContext = bufferContext;
+        internal SocketConnectionContext(Socket socket)
+        {            
             this.socket = socket;
-            socketObserver = new SocketDataObserver(bufferContext.ReceivingBuffer, socket);
-            socketObserver.Run();
+            transceivingProxy = new SocketTransceivingProxy(socket);
         }
 
-        public IBufferContext BufferContext { get; }
+        public ITransmitter Transmitter => transceivingProxy;
+
+        public IReceiver Receiver => transceivingProxy;
 
         public void Dispose()
         {            
             socket.Shutdown(SocketShutdown.Both);
             socket.Close();
-
-            if (BufferContext is IDisposable disp)
-            {
-                disp.Dispose();
-            }
         }
     }
 }

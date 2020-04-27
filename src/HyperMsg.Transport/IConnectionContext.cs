@@ -7,9 +7,8 @@ namespace HyperMsg.Transport
     /// </summary>
     public interface IConnectionContext : IDisposable
     {
-        /// <summary>
-        /// Buffer context attached to connection.
-        /// </summary>
-        IBufferContext BufferContext { get; }
+        ITransmitter Transmitter { get; }
+
+        IReceiver Receiver { get; }
     }
 }

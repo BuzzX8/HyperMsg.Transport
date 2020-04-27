@@ -4,33 +4,17 @@ using System.Threading.Tasks;
 
 namespace HyperMsg.Transport
 {
-    public class ConnectionCommandHandler
+    public class ConnectionCommandHandler : IDisposable
     {
-        private readonly IPort connection;
         private readonly IMessageSender messageSender;
+        private readonly IDisposable subscription;
+        private readonly IPort port;        
 
-        public ConnectionCommandHandler(IPort connection, IMessageSender messageSender)
+        public ConnectionCommandHandler(IMessagingContext messagingContext, IPort port)
         {
-            this.connection = connection ?? throw new ArgumentNullException(nameof(connection));
-            this.messageSender = messageSender ?? throw new ArgumentNullException(nameof(messageSender));
-        }
-
-        public void Handle(TransportCommand transportCommand)
-        {
-            switch (transportCommand)
-            {
-                case TransportCommand.Open:
-                    messageSender.Send(TransportEvent.Opening);
-                    connection.Open();
-                    messageSender.Send(TransportEvent.Opened);
-                    break;
-
-                case TransportCommand.Close:
-                    messageSender.Send(TransportEvent.Closing);
-                    connection.Close();
-                    messageSender.Send(TransportEvent.Closed);
-                    break;
-            }
+            this.port = port ?? throw new ArgumentNullException(nameof(port));
+            messageSender = messagingContext.Sender;
+            subscription = messagingContext.Observable.Subscribe<TransportCommand>(HandleAsync);
         }
 
         public async Task HandleAsync(TransportCommand transportCommand, CancellationToken cancellationToken)
@@ -39,16 +23,18 @@ namespace HyperMsg.Transport
             {
                 case TransportCommand.Open:
                     await messageSender.SendAsync(TransportEvent.Opening, cancellationToken);
-                    await connection.OpenAsync(cancellationToken);
+                    await port.OpenAsync(cancellationToken);
                     await messageSender.SendAsync(TransportEvent.Opened, cancellationToken);
                     break;
 
                 case TransportCommand.Close:
                     await messageSender.SendAsync(TransportEvent.Closing, cancellationToken);
-                    await connection.CloseAsync(cancellationToken);
+                    await port.CloseAsync(cancellationToken);
                     await messageSender.SendAsync(TransportEvent.Closed, cancellationToken);
                     break;
             }
         }
+
+        public void Dispose() => subscription.Dispose();
     }
 }

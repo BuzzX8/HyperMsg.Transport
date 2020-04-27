@@ -1,28 +1,27 @@
 ﻿using System.Net;
+using System.Net.Sockets;
 
 namespace HyperMsg.Transport.Sockets
 {
     public static class ConfigurableExtensions
     {
-        public static void AddSocketTransceiver(this IConfigurable configurable, EndPoint endpoint)
-        {
-            configurable.AddInitializer(provider =>
-            {
-                var context = provider.GetRequiredService<IBufferContext>();
-                var socket = CreateDefaultSocket(endpoint);
-                context.AttachSocket(socket);
-                configurable.AddService<IPort>(socket);
-                configurable.AddService<IPort<EndPoint>>(socket);
-                configurable.AddTransportCommandHandler(socket);
-                configurable.AddDataTransmissionCommandHandler(socket);
-            });
-        }
-
-        private static SocketProxy CreateDefaultSocket(EndPoint endPoint)
+        public static void AddSocketTransport(this IConfigurable configurable, EndPoint endpoint)
         {
             var socket = SocketFactory.CreateTcpSocket();
 
-            return new SocketProxy(socket, endPoint);
+            configurable.AddTransportCommandHandler(new SocketPortAdapter(socket, endpoint));
+            configurable.AddDataTransmissionCommandHandler(new SocketTransceivingProxy(socket));
+            configurable.AddSocketDataObserver(socket);
+        }
+
+        private static void AddSocketDataObserver(this IConfigurable configurable, Socket socket)
+        {
+            configurable.AddService(provider =>
+            {
+                var messagingContext = provider.GetRequiredService<IMessagingContext>();
+                var bufferContext = provider.GetRequiredService<IBufferContext>();
+                return new SocketDataObserver(messagingContext, bufferContext.ReceivingBuffer, socket);
+            });
         }
     }
 }

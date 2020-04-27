@@ -9,9 +9,8 @@ namespace HyperMsg.Transport.Sockets
     /// <summary>
     /// Listener for incoming socket connections.
     /// </summary>
-    public sealed class SocketConnectionListener : IPort, IConnectionHandlerRegistry, IDisposable
+    public sealed class SocketConnectionObservable : IPort, IConnectionObservable, IDisposable
     {
-        private readonly Func<IBufferContext> contextProvider;
         private readonly Socket listeningSocket;
         private readonly SocketAsyncEventArgs eventArgs;
         private readonly EndPoint endPoint;
@@ -20,9 +19,8 @@ namespace HyperMsg.Transport.Sockets
         private AsyncAction<IAcceptedConnection> asyncHandlers;
         private Action<IAcceptedConnection> handlers;
 
-        public SocketConnectionListener(Func<IBufferContext> contextProvider, EndPoint endPoint, int backlog = 1)
+        public SocketConnectionObservable(EndPoint endPoint, int backlog = 1)
         {
-            this.contextProvider = contextProvider;
             this.endPoint = endPoint;
             this.backlog = backlog;
             eventArgs = new SocketAsyncEventArgs();
@@ -64,9 +62,9 @@ namespace HyperMsg.Transport.Sockets
             return Task.CompletedTask;
         }
 
-        public void Register(Action<IAcceptedConnection> handler) => handlers += handler;
+        public void Subscribe(Action<IAcceptedConnection> observer) => handlers += observer;
 
-        public void Register(AsyncAction<IAcceptedConnection> handler) => asyncHandlers += handler;
+        public void Subscribe(AsyncAction<IAcceptedConnection> observer) => asyncHandlers += observer;
 
         public void Dispose() => Close();
 
@@ -77,7 +75,7 @@ namespace HyperMsg.Transport.Sockets
 
         private void HandleAcceptedSocket(Socket socket, bool runAccept)
         {
-            var acceptedConnection = new AcceptedSocketConnection(contextProvider, socket);
+            var acceptedConnection = new AcceptedSocketConnection(socket);
 
             try
             {

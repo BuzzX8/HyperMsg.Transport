@@ -6,12 +6,10 @@ namespace HyperMsg.Transport.Sockets
 {
     internal class AcceptedSocketConnection : IAcceptedConnection, IDisposable
     {
-        private readonly Func<IBufferContext> bufferContextProvider;
         private readonly Socket socket;
 
-        internal AcceptedSocketConnection(Func<IBufferContext> bufferContextProvider, Socket socket)
+        internal AcceptedSocketConnection(Socket socket)
         {
-            this.bufferContextProvider = bufferContextProvider;
             this.socket = socket;
         }
 
@@ -23,11 +21,9 @@ namespace HyperMsg.Transport.Sockets
             {
                 throw new InvalidOperationException(Resources.AcceptedSocketConnection_SocketClosedError);
             }
-
-            var bufferContext = bufferContextProvider.Invoke();
-            bufferContext.TransmittingBuffer.FlushRequested += new SocketProxy(socket, null).TransmitAsync;
+            
             ConnectionAcquired = true;
-            return new SocketConnectionContext(bufferContext, socket);
+            return new SocketConnectionContext(socket);
         }
 
         public void Dispose()

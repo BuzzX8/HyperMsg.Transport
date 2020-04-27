@@ -6,7 +6,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="HyperMsg" Version="0.9.12-alpha" />
+    <PackageReference Include="HyperMsg" Version="0.9.17-alpha" />
   </ItemGroup>
 
   <ItemGroup>

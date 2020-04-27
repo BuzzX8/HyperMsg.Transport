@@ -37,9 +37,4 @@ namespace HyperMsg.Transport
         /// <returns></returns>
         Task CloseAsync(CancellationToken cancellationToken);
     }
-
-    public interface IPort<T> : IPort
-    {
-        T EndPoint { get; set; }
-    }
 }

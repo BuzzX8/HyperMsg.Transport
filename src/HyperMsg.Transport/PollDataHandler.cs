@@ -56,7 +56,7 @@ namespace HyperMsg.Transport
                 }
 
                 Writer.Advance(bytesReceived);
-                buffer.FlushAsync(CancellationToken.None).GetAwaiter().GetResult();
+                //buffer.FlushAsync(CancellationToken.None).GetAwaiter().GetResult();
             }
         }
 

@@ -11,12 +11,10 @@ namespace HyperMsg.Transport
         /// <param name="port"></param>
         public static void AddTransportCommandHandler(this IConfigurable configurable, IPort port)
         {            
-            configurable.AddInitializer(provider =>
+            configurable.AddService(provider =>
             {
-                var messageSender = provider.GetRequiredService<IMessageSender>();
-                var connectionHandler = new ConnectionCommandHandler(port, messageSender);
-                var observable = provider.GetRequiredService<IMessageObservable>();
-                observable.Subscribe<TransportCommand>(connectionHandler.HandleAsync);
+                var context = provider.GetRequiredService<IMessagingContext>();
+                return new ConnectionCommandHandler(context, port);
             });
         }
 
@@ -27,32 +25,33 @@ namespace HyperMsg.Transport
         /// <param name="transmitter"></param>
         public static void AddDataTransmissionCommandHandler(this IConfigurable configurable, ITransmitter transmitter)
         {            
-            configurable.AddInitializer(provider =>
+            configurable.AddService(provider =>
             {
-                var dataHandler = new DataTransmissionHandler(transmitter);
-                var bufferContext = provider.GetRequiredService<IBufferContext>();
-                bufferContext.TransmittingBuffer.FlushRequested += dataHandler.HandleBufferFlushAsync;
+                var observable = provider.GetRequiredService<IMessageObservable>();
+                return new DataTransmissionHandler(observable, transmitter);
             });
         }
 
         public static void UsePollDataHandler(this IConfigurable configurable, IReceiver receiver, TimeSpan pollInterval)
         {
-            configurable.AddInitializer(provider =>
+            configurable.AddService(provider =>
             {
                 var bufferContext = provider.GetRequiredService<IBufferContext>();
                 var dataHandler = new PollDataHandler(bufferContext.ReceivingBuffer, receiver, pollInterval);
                 var observable = provider.GetRequiredService<IMessageObservable>();
                 observable.Subscribe<TransportEvent>(dataHandler.Handle);
+                return dataHandler;
             });
         }
 
         public static void UseWorkerDataHandler(this IConfigurable configurable, AsyncAction asyncAction)
         {
-            configurable.AddInitializer(provider =>
+            configurable.AddService(provider =>
             {
                 var worker = new WorkerDataHandler(asyncAction);
                 var observable = provider.GetRequiredService<IMessageObservable>();
                 observable.Subscribe<TransportEvent>(worker.HandleTransportEventAsync);
+                return worker;
             });
         }
     }
