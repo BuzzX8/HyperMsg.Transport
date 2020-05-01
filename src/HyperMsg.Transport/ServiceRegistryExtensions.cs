@@ -2,16 +2,16 @@
 
 namespace HyperMsg.Transport
 {
-    public static class ConfigurableExtensions
+    public static class ServiceRegistryExtensions
     {
         /// <summary>
         /// Adds command handler which dispatches transport commands to port. Depends on IMessageSender and IMessageHandlerRegistry.
         /// </summary>
-        /// <param name="configurable"></param>
+        /// <param name="serviceRegistry"></param>
         /// <param name="port"></param>
-        public static void AddTransportCommandHandler(this IConfigurable configurable, IPort port)
+        public static void AddTransportCommandHandler(this IServiceRegistry serviceRegistry, IPort port)
         {            
-            configurable.AddService(provider =>
+            serviceRegistry.AddService(provider =>
             {
                 var context = provider.GetRequiredService<IMessagingContext>();
                 return new ConnectionCommandHandler(context, port);
@@ -21,20 +21,20 @@ namespace HyperMsg.Transport
         /// <summary>
         /// Adds handler dispatches flush requests from transmitting buffer to transmitter. Depends on IBufferContext.
         /// </summary>
-        /// <param name="configurable"></param>
+        /// <param name="serviceRegistry"></param>
         /// <param name="transmitter"></param>
-        public static void AddDataTransmissionCommandHandler(this IConfigurable configurable, ITransmitter transmitter)
+        public static void AddDataTransmissionCommandHandler(this IServiceRegistry serviceRegistry, ITransmitter transmitter)
         {            
-            configurable.AddService(provider =>
+            serviceRegistry.AddService(provider =>
             {
                 var observable = provider.GetRequiredService<IMessageObservable>();
                 return new DataTransmissionHandler(observable, transmitter);
             });
         }
 
-        public static void UsePollDataHandler(this IConfigurable configurable, IReceiver receiver, TimeSpan pollInterval)
+        public static void UsePollDataHandler(this IServiceRegistry serviceRegistry, IReceiver receiver, TimeSpan pollInterval)
         {
-            configurable.AddService(provider =>
+            serviceRegistry.AddService(provider =>
             {
                 var bufferContext = provider.GetRequiredService<IBufferContext>();
                 var dataHandler = new PollDataHandler(bufferContext.ReceivingBuffer, receiver, pollInterval);
@@ -44,9 +44,9 @@ namespace HyperMsg.Transport
             });
         }
 
-        public static void UseWorkerDataHandler(this IConfigurable configurable, AsyncAction asyncAction)
+        public static void UseWorkerDataHandler(this IServiceRegistry serviceRegistry, AsyncAction asyncAction)
         {
-            configurable.AddService(provider =>
+            serviceRegistry.AddService(provider =>
             {
                 var worker = new WorkerDataHandler(asyncAction);
                 var observable = provider.GetRequiredService<IMessageObservable>();

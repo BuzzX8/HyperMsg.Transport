@@ -7,7 +7,7 @@ namespace HyperMsg.Transport.Sockets
     {
         private const int DefaultBufferSize = 2048;
         private readonly IPEndPoint EndPoint;
-        private readonly ServiceProvider serviceProvider;
+        private readonly ServiceContainer serviceContainer;
 
         protected readonly IMessagingContext MessagingContext;
         protected readonly SocketConnectionObservable ConnectionListener;
@@ -15,14 +15,14 @@ namespace HyperMsg.Transport.Sockets
         public SocketFixtureBase(int port)
         {
             EndPoint = new IPEndPoint(IPAddress.Loopback, port);
-            serviceProvider = new ServiceProvider();
-            serviceProvider.AddCoreServices(DefaultBufferSize, DefaultBufferSize);
-            serviceProvider.AddSocketTransport(EndPoint);
-            MessagingContext = serviceProvider.GetRequiredService<IMessagingContext>();
+            serviceContainer = new ServiceContainer();
+            serviceContainer.AddCoreServices(DefaultBufferSize, DefaultBufferSize);
+            serviceContainer.AddSocketTransport(EndPoint);
+            MessagingContext = serviceContainer.GetRequiredService<IMessagingContext>();
             ConnectionListener = new SocketConnectionObservable(EndPoint);
         }
 
-        protected T GetService<T>() => serviceProvider.GetService<T>();
+        protected T GetService<T>() => serviceContainer.GetService<T>();
 
         public void Dispose()
         {            

@@ -1,5 +1,4 @@
 ﻿using FakeItEasy;
-using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Xunit;
@@ -10,7 +9,7 @@ namespace HyperMsg.Transport
     {
         private readonly ConnectionCommandHandler commandHandler;
         private readonly IMessagingContext messagingContext;
-        private readonly IPort port;        
+        private readonly IPort port;
 
         private readonly CancellationTokenSource tokenSource;
 
