@@ -4,17 +4,15 @@ using System.Threading.Tasks;
 
 namespace HyperMsg.Transport
 {
-    public class ConnectionCommandHandler : IDisposable
+    internal class ConnectionCommandComponent
     {
-        private readonly IMessageSender messageSender;
-        private readonly IDisposable subscription;
+        private readonly IMessageSender messageSender;        
         private readonly IPort port;        
 
-        public ConnectionCommandHandler(IMessagingContext messagingContext, IPort port)
+        public ConnectionCommandComponent(IMessageSender messageSender, IPort port)
         {
             this.port = port ?? throw new ArgumentNullException(nameof(port));
-            messageSender = messagingContext.Sender;
-            subscription = messagingContext.Observable.Subscribe<TransportCommand>(HandleAsync);
+            this.messageSender = messageSender;
         }
 
         public async Task HandleAsync(TransportCommand transportCommand, CancellationToken cancellationToken)
@@ -34,7 +32,5 @@ namespace HyperMsg.Transport
                     break;
             }
         }
-
-        public void Dispose() => subscription.Dispose();
     }
 }

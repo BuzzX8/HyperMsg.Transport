@@ -1,4 +1,5 @@
-﻿using System;
+﻿using HyperMsg.Extensions;
+using System;
 using System.Net.Sockets;
 
 namespace HyperMsg.Transport.Sockets
@@ -7,23 +8,24 @@ namespace HyperMsg.Transport.Sockets
     {
         private readonly IMessageSender messageSender;
         private readonly IBuffer receivingBuffer;
-        private readonly IDisposable subscription;
 
         private readonly Socket socket;
-        private readonly SocketAsyncEventArgs socketEventArgs;        
+        private readonly SocketAsyncEventArgs socketEventArgs;
 
-        public SocketDataObserver(IMessagingContext messagingContext, IBuffer receivingBuffer, Socket socket)
+        private readonly object disposeSync = new object();
+        private bool isDisposed = false;
+
+        public SocketDataObserver(IMessagingContext messagingContext, IBufferContext bufferContext, Socket socket)
         {
             messageSender = messagingContext.Sender;
-            this.receivingBuffer = receivingBuffer ?? throw new ArgumentNullException(nameof(receivingBuffer));            
-            subscription = messagingContext.Observable.Subscribe<TransportEvent>(HandleTransportEvent);
+            receivingBuffer = bufferContext.ReceivingBuffer;
 
-            this.socket = socket ?? throw new ArgumentNullException(nameof(socket));
+            this.socket = socket;
             socketEventArgs = new SocketAsyncEventArgs();
             socketEventArgs.Completed += DataReceivingCompleted;
         }
 
-        private void HandleTransportEvent(TransportEvent transportEvent)
+        public void HandleTransportEvent(TransportEvent transportEvent)
         {
             if (transportEvent == TransportEvent.Opened)
             {
@@ -56,13 +58,23 @@ namespace HyperMsg.Transport.Sockets
         private void ResetBuffer()
         {
             var memory = receivingBuffer.Writer.GetMemory();
-            socketEventArgs.SetBuffer(memory);
+
+            lock (disposeSync)
+            {
+                if (!isDisposed)
+                {
+                    socketEventArgs.SetBuffer(memory);
+                }
+            }
         }
 
         public void Dispose()
         {
-            socketEventArgs.Dispose();
-            subscription.Dispose();
+            lock (disposeSync)
+            {
+                socketEventArgs.Dispose();
+                isDisposed = true;
+            }
         }
     }
 }

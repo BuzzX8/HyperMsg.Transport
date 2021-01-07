@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Buffers;
 using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
@@ -24,9 +25,21 @@ namespace HyperMsg.Transport.Sockets
 
         #region IReceiver
 
-        public int Receive(Memory<byte> buffer) => socket.Receive(buffer.Span);
+        public int Receive(IBufferWriter<byte> bufferWriter)
+        {
+            var buffer = bufferWriter.GetSpan();
+            var bytesReceived = socket.Receive(buffer);
+            bufferWriter.Advance(bytesReceived);
+            return bytesReceived;
+        }
 
-        public Task<int> ReceiveAsync(Memory<byte> buffer, CancellationToken cancellationToken) => socket.ReceiveAsync(buffer, SocketFlags.None, cancellationToken).AsTask();
+        public async Task<int> ReceiveAsync(IBufferWriter<byte> bufferWriter, CancellationToken cancellationToken)
+        {
+            var buffer = bufferWriter.GetMemory();
+            var bytesReceived = await socket.ReceiveAsync(buffer, SocketFlags.None, cancellationToken).AsTask();
+            bufferWriter.Advance(bytesReceived);
+            return bytesReceived;
+        }
 
         #endregion
     }

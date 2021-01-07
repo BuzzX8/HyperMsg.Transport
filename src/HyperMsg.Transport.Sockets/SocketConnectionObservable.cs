@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Microsoft.Extensions.Hosting;
+using System;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading;
@@ -9,22 +10,26 @@ namespace HyperMsg.Transport.Sockets
     /// <summary>
     /// Listener for incoming socket connections.
     /// </summary>
-    public sealed class SocketConnectionObservable : IPort, IConnectionObservable, IDisposable
+    internal sealed class SocketConnectionObservable : IHostedService, IPort, IDisposable
     {
-        private readonly Socket listeningSocket;
-        private readonly SocketAsyncEventArgs eventArgs;
+        private readonly Socket listeningSocket;        
         private readonly EndPoint endPoint;
         private readonly int backlog;
 
-        private AsyncAction<IAcceptedConnection> asyncHandlers;
-        private Action<IAcceptedConnection> handlers;
+        private readonly AsyncAction<IAcceptedConnection> asyncHandlers;
+        private readonly Action<IAcceptedConnection> handlers;
+        private readonly object disposeSync = new object();
 
-        public SocketConnectionObservable(EndPoint endPoint, int backlog = 1)
+        private SocketAsyncEventArgs eventArgs;        
+
+        public SocketConnectionObservable(IServiceProvider serviceProvider, EndPoint endPoint)
         {
+            asyncHandlers = serviceProvider.GetService(typeof(AsyncAction<IAcceptedConnection>)) as AsyncAction<IAcceptedConnection>;
+            handlers = serviceProvider.GetService(typeof(Action<IAcceptedConnection>)) as Action<IAcceptedConnection>;
             this.endPoint = endPoint;
-            this.backlog = backlog;
-            eventArgs = new SocketAsyncEventArgs();
-            eventArgs.Completed += OnSocketAccepted;
+            backlog = 1;
+
+            
             listeningSocket = SocketFactory.CreateTcpSocket();
             IsOpen = false;
         }
@@ -33,6 +38,8 @@ namespace HyperMsg.Transport.Sockets
 
         public void Open()
         {
+            eventArgs = new SocketAsyncEventArgs();
+            eventArgs.Completed += OnSocketAccepted;
             listeningSocket.Bind(endPoint);
             listeningSocket.Listen(backlog);
             IsOpen = true;
@@ -51,9 +58,13 @@ namespace HyperMsg.Transport.Sockets
             {
                 return;
             }
-            
-            listeningSocket.Close();
-            IsOpen = false;
+
+            lock (disposeSync)
+            {
+                eventArgs.Dispose();
+                listeningSocket.Close();
+                IsOpen = false;
+            }
         }
 
         public Task CloseAsync(CancellationToken cancellationToken)
@@ -62,19 +73,20 @@ namespace HyperMsg.Transport.Sockets
             return Task.CompletedTask;
         }
 
-        public void Subscribe(Action<IAcceptedConnection> observer) => handlers += observer;
-
-        public void Subscribe(AsyncAction<IAcceptedConnection> observer) => asyncHandlers += observer;
-
         public void Dispose() => Close();
 
-        private void OnSocketAccepted(object sender, SocketAsyncEventArgs eventArgs)
-        {
-            HandleAcceptedSocket(eventArgs.AcceptSocket, true);
-        }
+        private void OnSocketAccepted(object sender, SocketAsyncEventArgs eventArgs) => HandleAcceptedSocket(eventArgs.AcceptSocket, true);
 
         private void HandleAcceptedSocket(Socket socket, bool runAccept)
         {
+            lock (disposeSync)
+            {
+                if (!IsOpen)
+                {
+                    return;
+                }
+            }
+
             var acceptedConnection = new AcceptedSocketConnection(socket);
 
             try
@@ -103,6 +115,14 @@ namespace HyperMsg.Transport.Sockets
             {
                 HandleAcceptedSocket(eventArgs.AcceptSocket, false);
             }            
+        }
+
+        public Task StartAsync(CancellationToken cancellationToken) => OpenAsync(cancellationToken);
+
+        public Task StopAsync(CancellationToken cancellationToken)
+        {
+            Close();
+            return Task.CompletedTask;
         }
     }
 }

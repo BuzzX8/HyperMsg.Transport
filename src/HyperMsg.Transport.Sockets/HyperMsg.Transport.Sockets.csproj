@@ -6,11 +6,20 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="HyperMsg" Version="0.9.21-alpha" />
+    <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="5.0.0" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\HyperMsg.Transport\HyperMsg.Transport.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="HyperMsg">
+      <HintPath>..\HyperMsg.Transport\bin\Debug\netstandard2.0\HyperMsg.dll</HintPath>
+    </Reference>
+    <Reference Include="HyperMsg.Core">
+      <HintPath>..\HyperMsg.Transport\bin\Debug\netstandard2.0\HyperMsg.Core.dll</HintPath>
+    </Reference>
   </ItemGroup>
 
   <ItemGroup>

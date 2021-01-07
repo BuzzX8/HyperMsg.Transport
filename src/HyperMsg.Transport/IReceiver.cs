@@ -1,4 +1,4 @@
-﻿using System;
+﻿using System.Buffers;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -14,7 +14,7 @@ namespace HyperMsg.Transport
         /// </summary>
         /// <param name="buffer">Memory buffer</param>
         /// <returns>Bytes readed</returns>
-        int Receive(Memory<byte> buffer);
+        int Receive(IBufferWriter<byte> buffer);
 
         /// <summary>
         /// Receives data into buffer asynchronously.
@@ -22,6 +22,6 @@ namespace HyperMsg.Transport
         /// <param name="buffer">Memory buffer</param>
         /// <param name="cancellationToken"></param>
         /// <returns>Bytes readed</returns>
-        Task<int> ReceiveAsync(Memory<byte> buffer, CancellationToken cancellationToken);
+        Task<int> ReceiveAsync(IBufferWriter<byte> buffer, CancellationToken cancellationToken);
     }
 }

@@ -13,8 +13,6 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "HyperMsg.Transport.Sockets.
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "HyperMsg.Transport", "src\HyperMsg.Transport\HyperMsg.Transport.csproj", "{9DF6FCDA-977F-4856-9EAB-8F5150D72A4C}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "HyperMsg.Transport.Tests", "test\HyperMsg.Transport.Tests\HyperMsg.Transport.Tests.csproj", "{E9E16E01-BDEA-4109-9644-8E935B0726B2}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -61,18 +59,6 @@ Global
 		{9DF6FCDA-977F-4856-9EAB-8F5150D72A4C}.Release|x64.Build.0 = Release|Any CPU
 		{9DF6FCDA-977F-4856-9EAB-8F5150D72A4C}.Release|x86.ActiveCfg = Release|Any CPU
 		{9DF6FCDA-977F-4856-9EAB-8F5150D72A4C}.Release|x86.Build.0 = Release|Any CPU
-		{E9E16E01-BDEA-4109-9644-8E935B0726B2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{E9E16E01-BDEA-4109-9644-8E935B0726B2}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{E9E16E01-BDEA-4109-9644-8E935B0726B2}.Debug|x64.ActiveCfg = Debug|Any CPU
-		{E9E16E01-BDEA-4109-9644-8E935B0726B2}.Debug|x64.Build.0 = Debug|Any CPU
-		{E9E16E01-BDEA-4109-9644-8E935B0726B2}.Debug|x86.ActiveCfg = Debug|Any CPU
-		{E9E16E01-BDEA-4109-9644-8E935B0726B2}.Debug|x86.Build.0 = Debug|Any CPU
-		{E9E16E01-BDEA-4109-9644-8E935B0726B2}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{E9E16E01-BDEA-4109-9644-8E935B0726B2}.Release|Any CPU.Build.0 = Release|Any CPU
-		{E9E16E01-BDEA-4109-9644-8E935B0726B2}.Release|x64.ActiveCfg = Release|Any CPU
-		{E9E16E01-BDEA-4109-9644-8E935B0726B2}.Release|x64.Build.0 = Release|Any CPU
-		{E9E16E01-BDEA-4109-9644-8E935B0726B2}.Release|x86.ActiveCfg = Release|Any CPU
-		{E9E16E01-BDEA-4109-9644-8E935B0726B2}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -81,7 +67,6 @@ Global
 		{38225F92-E5F8-4D43-8492-A88F40B8FBE8} = {25112750-8562-4F88-BEFD-A52338FFD340}
 		{2DEE2996-187D-4E63-8719-6001D76171EB} = {4976C5BD-D36D-4DB8-A18B-8B59923F6BF2}
 		{9DF6FCDA-977F-4856-9EAB-8F5150D72A4C} = {25112750-8562-4F88-BEFD-A52338FFD340}
-		{E9E16E01-BDEA-4109-9644-8E935B0726B2} = {4976C5BD-D36D-4DB8-A18B-8B59923F6BF2}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {DDB293CE-5267-400C-A33E-B8388747B03A}
