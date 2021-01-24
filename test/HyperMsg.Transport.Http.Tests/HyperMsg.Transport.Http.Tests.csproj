@@ -1,0 +1,40 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net5.0</TargetFramework>
+
+    <IsPackable>false</IsPackable>
+
+    <RootNamespace>HyperMsg.Transport.Http</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="FakeItEasy" Version="6.2.1" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="5.0.1" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="5.0.0" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="16.7.1" />
+    <PackageReference Include="xunit" Version="2.4.1" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.4.3">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="coverlet.collector" Version="1.3.0">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\HyperMsg.Transport.Http\HyperMsg.Transport.Http.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="HyperMsg">
+      <HintPath>..\..\..\HyperMsg\src\HyperMsg.Core\bin\Debug\netstandard2.0\HyperMsg.dll</HintPath>
+    </Reference>
+    <Reference Include="HyperMsg.Core">
+      <HintPath>..\..\..\HyperMsg\src\HyperMsg.Core\bin\Debug\netstandard2.0\HyperMsg.Core.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+
+</Project>

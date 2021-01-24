@@ -1,12 +1,12 @@
-﻿using HyperMsg.Extensions;
-using System;
+﻿using Microsoft.Extensions.Hosting;
 using System.Net.Sockets;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace HyperMsg.Transport.Sockets
 {
-    internal class SocketDataObserver : IDisposable
-    {
-        private readonly IMessageSender messageSender;
+    internal class SocketDataReceiver : MessagingObject, IHostedService
+    {        
         private readonly IBuffer receivingBuffer;
 
         private readonly Socket socket;
@@ -15,14 +15,14 @@ namespace HyperMsg.Transport.Sockets
         private readonly object disposeSync = new object();
         private bool isDisposed = false;
 
-        public SocketDataObserver(IMessagingContext messagingContext, IBufferContext bufferContext, Socket socket)
-        {
-            messageSender = messagingContext.Sender;
+        public SocketDataReceiver(IMessagingContext messagingContext, IBufferContext bufferContext, Socket socket) : base(messagingContext)
+        {            
             receivingBuffer = bufferContext.ReceivingBuffer;
 
             this.socket = socket;
             socketEventArgs = new SocketAsyncEventArgs();
             socketEventArgs.Completed += DataReceivingCompleted;
+            AddHandler<TransportEvent>(HandleTransportEvent);
         }
 
         public void HandleTransportEvent(TransportEvent transportEvent)
@@ -52,7 +52,7 @@ namespace HyperMsg.Transport.Sockets
             }
 
             receivingBuffer.Writer.Advance(socketEventArgs.BytesTransferred);
-            messageSender.BufferReceivedData(receivingBuffer);
+            Received(receivingBuffer);
         }
 
         private void ResetBuffer()
@@ -68,7 +68,7 @@ namespace HyperMsg.Transport.Sockets
             }
         }
 
-        public void Dispose()
+        public override void Dispose()
         {
             lock (disposeSync)
             {
@@ -76,5 +76,9 @@ namespace HyperMsg.Transport.Sockets
                 isDisposed = true;
             }
         }
+
+        public Task StartAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+
+        public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
     }
 }

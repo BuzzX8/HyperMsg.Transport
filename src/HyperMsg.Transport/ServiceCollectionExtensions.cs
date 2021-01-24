@@ -1,21 +1,26 @@
-﻿using HyperMsg.Extensions;
-using Microsoft.Extensions.DependencyInjection;
+﻿using Microsoft.Extensions.DependencyInjection;
+using System;
+using System.Linq;
 
 namespace HyperMsg.Transport
 {
     public static class ServiceCollectionExtensions
     {
-        /// <summary>
-        /// Adds command handler which dispatches transport commands to port. Depends on IMessageSender and IMessageHandlerRegistry.
-        /// </summary>
-        /// <param name="services"></param>
-        public static IServiceCollection AddTransportCommandObserver(this IServiceCollection services) => services.AddObserver<ConnectionCommandComponent, TransportCommand>(component => component.HandleAsync);
+        public static IServiceCollection AddBufferTransmitter(this IServiceCollection services, AsyncAction<ReadOnlyMemory<byte>> bufferTransmitter)
+        {
+            var transmitters = services.SingleOrDefault(s => s.ServiceType == typeof(BufferTransmitters))?.ImplementationInstance as BufferTransmitters;
+                       
+            if (transmitters == null)
+            {
+                transmitters = new BufferTransmitters();
+                services.AddHostedService<BufferTransmissionService>()
+                    .AddSingleton(transmitters);
+            }
 
-        /// <summary>
-        /// Adds handler dispatches flush requests from transmitting buffer to transmitter. Depends on IBufferContext.
-        /// </summary>
-        /// <param name="services"></param>
-        /// <param name="transmitter"></param>
-        public static IServiceCollection AddBufferDataTransmitObserver(this IServiceCollection services) => services.AddBufferDataTransmitObserver<BufferDataTransmissionComponent>(component => component.HandleAsync);
+            transmitters.Add(bufferTransmitter);
+            return services;
+        }
+
+        public static IServiceCollection AddConnectionCommandService<T>(this IServiceCollection services) where T : ConnectionCommandService => services.AddHostedService<T>();
     }
 }

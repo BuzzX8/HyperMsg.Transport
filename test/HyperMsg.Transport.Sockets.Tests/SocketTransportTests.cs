@@ -1,8 +1,9 @@
 ﻿using HyperMsg.Extensions;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 using System;
 using System.Buffers;
+using System.Net;
+using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
 using Xunit;
@@ -16,9 +17,10 @@ namespace HyperMsg.Transport.Sockets
 
         private readonly Host host;
         private readonly IMessageSender messageSender;
-        private IConnectionContext acceptedContext;
 
-        private readonly ManualResetEventSlim connectionEvent = new();
+        private readonly Socket listeningSocket;
+        private Socket acceptedSocket;
+
         private readonly ManualResetEventSlim transmitEvent = new();
         private readonly ManualResetEventSlim receiveEvent = new();
         
@@ -26,23 +28,18 @@ namespace HyperMsg.Transport.Sockets
 
         public SocketTransportTests()
         {
-            var services = new ServiceCollection();
-            services.AddMessagingServices()
-                        .AddSocketTransport("localhost", Port)
-                        .AddBufferDataReceiveObserver(buffer =>
-                        {
-                            receivedData = buffer.Reader.Read().ToArray();
-                            receiveEvent.Set();                            
-                        })                        
-                        .AddConnectionObserver(connection =>
-                        {
-                            acceptedContext = connection.Acquire();
-                            connectionEvent.Set();
-                        });
+            listeningSocket = new Socket(SocketType.Stream, ProtocolType.Tcp);
+            listeningSocket.Bind(new IPEndPoint(IPAddress.Loopback, Port));
 
-            host = new(services);
-            messageSender = host.Services.GetRequiredService<IMessageSender>();
-            host.Start();
+            host = Host.CreateDefault(services => services.AddLocalIPEndPoint(Port).AddSocketServices());
+            host.StartAsync().Wait();
+            messageSender = host.GetRequiredService<IMessageSender>();
+            var observable = host.GetRequiredService<IMessageObservable>();
+            observable.OnReceived<IBuffer>(buffer =>
+            {
+                receivedData = buffer.Reader.Read().ToArray();
+                receiveEvent.Set();
+            });
         }
 
         [Fact]
@@ -51,11 +48,13 @@ namespace HyperMsg.Transport.Sockets
             var transmittingData = Guid.NewGuid().ToByteArray();
             await OpenConnectionAsync();
 
-            Assert.NotNull(acceptedContext);
+            Assert.NotNull(acceptedSocket);
             await TransmittAsync(transmittingData);
 
-            var receivedData = await ReceiveAsync();
-            Assert.Equal(transmittingData, receivedData);
+            var actualData = new byte[transmittingData.Length];
+            await acceptedSocket.ReceiveAsync(actualData, SocketFlags.None);
+
+            Assert.Equal(transmittingData, actualData);
         }
 
         [Fact]
@@ -64,7 +63,7 @@ namespace HyperMsg.Transport.Sockets
             var transmittingData = Guid.NewGuid().ToByteArray();
             await OpenConnectionAsync();
 
-            await acceptedContext.Transmitter.TransmitAsync(transmittingData, default);
+            acceptedSocket.Send(transmittingData);
             receiveEvent.Wait(waitTimeout);
 
             Assert.Equal(transmittingData, receivedData);
@@ -72,8 +71,14 @@ namespace HyperMsg.Transport.Sockets
 
         private async Task OpenConnectionAsync()
         {
+            listeningSocket.Listen();
+            
+            var acceptTask = listeningSocket.AcceptAsync();
             await messageSender.SendAsync(TransportCommand.Open, default);
-            connectionEvent.Wait(waitTimeout);
+            acceptTask.Wait(waitTimeout);
+            Assert.True(acceptTask.IsCompleted);
+
+            acceptedSocket = acceptTask.Result;
         }
 
         private async Task TransmittAsync(byte[] data)
@@ -82,20 +87,15 @@ namespace HyperMsg.Transport.Sockets
             var buffer = bufferContext.TransmittingBuffer;
 
             buffer.Writer.Write(data);
-            await messageSender.TransmitBufferDataAsync(buffer, default);
+            await messageSender.TransmitAsync(buffer, default);
             transmitEvent.Set();            
         }
 
-        private async Task<byte[]> ReceiveAsync()
+        public void Dispose()
         {
-            transmitEvent.Wait(waitTimeout);
-            var bufferContext = host.Services.GetRequiredService<IBufferContext>();
-            var buffer = bufferContext.ReceivingBuffer;
-
-            await acceptedContext.Receiver.ReceiveAsync(buffer.Writer, default);
-            return buffer.Reader.Read().ToArray();
+            host.Dispose();
+            listeningSocket.Dispose();
+            acceptedSocket?.Dispose();
         }
-
-        public void Dispose() => host.Dispose();
     }
 }

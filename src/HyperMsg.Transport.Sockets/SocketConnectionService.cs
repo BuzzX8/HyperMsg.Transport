@@ -9,13 +9,13 @@ using System.Threading.Tasks;
 
 namespace HyperMsg.Transport.Sockets
 {
-    internal sealed class SocketPortAdapter : IPort, IDisposable
+    internal sealed class SocketConnectionService : ConnectionCommandService
     {
         private readonly Socket socket;
         private readonly EndPoint endPoint;
         private Stream stream;
 
-        public SocketPortAdapter(Socket socket, EndPoint endPoint)
+        public SocketConnectionService(IMessagingContext messagingContext, Socket socket, EndPoint endPoint) : base(messagingContext)
         {
             this.socket = socket ?? throw new ArgumentNullException(nameof(socket));
             this.endPoint = endPoint ?? throw new ArgumentNullException(nameof(endPoint));
@@ -27,32 +27,24 @@ namespace HyperMsg.Transport.Sockets
 
         public bool IsOpen => socket.Connected;
 
-        public void Open() => socket.Connect(endPoint);
-
-        public Task OpenAsync(CancellationToken cancellationToken)
+        protected override Task OpenAsync(CancellationToken cancellationToken)
         {
             socket.Connect(endPoint);
             return Task.CompletedTask;
         }
 
-        public void Close()
+        protected override Task CloseAsync(CancellationToken cancellationToken)
         {
             if (!IsOpen)
             {
-                return;
+                return Task.CompletedTask;
             }
 
             socket.Shutdown(SocketShutdown.Both);
             socket.Close();
-        }
 
-        public Task CloseAsync(CancellationToken cancellationToken)
-        {
-            Close();
             return Task.CompletedTask;
-        }
-
-        public void Dispose() => Close();
+        }        
 
         public void SetTls()
         {
