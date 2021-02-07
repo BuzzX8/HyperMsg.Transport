@@ -1,4 +1,5 @@
-﻿using HyperMsg.Extensions;
+﻿using HyperMsg.Connection;
+using HyperMsg.Extensions;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Buffers;
@@ -8,14 +9,14 @@ using System.Threading;
 using System.Threading.Tasks;
 using Xunit;
 
-namespace HyperMsg.Transport.Sockets
+namespace HyperMsg.Sockets
 {
     public class SocketTransportTests : IDisposable
     {
         private readonly TimeSpan waitTimeout = TimeSpan.FromSeconds(5);
         private readonly int Port = 8888;
 
-        private readonly Host host;
+        private readonly ServiceHost host;
         private readonly IMessageSender messageSender;
 
         private readonly Socket listeningSocket;
@@ -31,11 +32,11 @@ namespace HyperMsg.Transport.Sockets
             listeningSocket = new Socket(SocketType.Stream, ProtocolType.Tcp);
             listeningSocket.Bind(new IPEndPoint(IPAddress.Loopback, Port));
 
-            host = Host.CreateDefault(services => services.AddLocalIPEndPoint(Port).AddSocketServices());
+            host = ServiceHost.CreateDefault(services => services.AddLocalSocketConnection(Port));
             host.StartAsync().Wait();
             messageSender = host.GetRequiredService<IMessageSender>();
-            var observable = host.GetRequiredService<IMessageObservable>();
-            observable.OnReceived<IBuffer>(buffer =>
+            var registry = host.GetRequiredService<IMessageHandlersRegistry>();
+            registry.RegisterReceiveHandler<IBuffer>(buffer =>
             {
                 receivedData = buffer.Reader.Read().ToArray();
                 receiveEvent.Set();
@@ -74,7 +75,7 @@ namespace HyperMsg.Transport.Sockets
             listeningSocket.Listen();
             
             var acceptTask = listeningSocket.AcceptAsync();
-            await messageSender.SendAsync(TransportCommand.Open, default);
+            await messageSender.SendAsync(ConnectionCommand.Open, default);
             acceptTask.Wait(waitTimeout);
             Assert.True(acceptTask.IsCompleted);
 

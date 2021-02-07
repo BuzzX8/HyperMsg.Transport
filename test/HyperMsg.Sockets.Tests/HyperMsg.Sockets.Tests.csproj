@@ -5,7 +5,7 @@
 
     <IsPackable>false</IsPackable>
 
-    <RootNamespace>HyperMsg.Transport.Sockets</RootNamespace>
+    <RootNamespace>HyperMsg.Sockets</RootNamespace>
 
     <LangVersion>9.0</LangVersion>
   </PropertyGroup>
@@ -23,7 +23,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\HyperMsg.Transport.Sockets\HyperMsg.Transport.Sockets.csproj" />
+    <ProjectReference Include="..\..\src\HyperMsg.Sockets\HyperMsg.Sockets.csproj" />
   </ItemGroup>
 
   <ItemGroup>

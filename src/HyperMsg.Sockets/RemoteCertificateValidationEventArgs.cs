@@ -2,7 +2,7 @@
 using System.Net.Security;
 using System.Security.Cryptography.X509Certificates;
 
-namespace HyperMsg.Transport.Sockets
+namespace HyperMsg.Sockets
 {
     public class RemoteCertificateValidationEventArgs : EventArgs
     {

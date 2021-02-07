@@ -1,10 +1,9 @@
-﻿using HyperMsg.Extensions;
-using Microsoft.Extensions.Hosting;
+﻿using Microsoft.Extensions.Hosting;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace HyperMsg.Transport.Http
+namespace HyperMsg.Http
 {
     internal class HttpTransportService : MessagingObject, IHostedService
     {
@@ -14,7 +13,7 @@ namespace HyperMsg.Transport.Http
         {
             this.messageInvoker = messageInvoker;
 
-            AddTransmitter<HttpRequestMessage>(HandleAsync);
+            RegisterHandler<HttpRequestMessage>(HandleAsync);
         }
 
         private Task HandleAsync(HttpRequestMessage httpRequest, CancellationToken cancellationToken)
@@ -39,7 +38,7 @@ namespace HyperMsg.Transport.Http
                 return;
             }
 
-            Sender.Received(response.Result);
+            Receive(response.Result);
         }
 
         public Task StartAsync(CancellationToken cancellationToken) => Task.CompletedTask;

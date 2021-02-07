@@ -25,7 +25,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\HyperMsg.Transport.Http\HyperMsg.Transport.Http.csproj" />
+    <ProjectReference Include="..\..\src\HyperMsg.Http\HyperMsg.Http.csproj" />
   </ItemGroup>
 
   <ItemGroup>

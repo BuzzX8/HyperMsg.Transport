@@ -1,6 +1,6 @@
 ﻿using System.Net.Sockets;
 
-namespace HyperMsg.Transport.Sockets
+namespace HyperMsg.Sockets
 {
     internal static class SocketFactory
     {

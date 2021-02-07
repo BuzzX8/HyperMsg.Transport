@@ -6,11 +6,11 @@ using System.Threading;
 using System.Threading.Tasks;
 using Xunit;
 
-namespace HyperMsg.Transport.Http
+namespace HyperMsg.Http
 {
     public class HttpTransportTest
     {
-        private readonly Host host;
+        private readonly ServiceHost host;
         private readonly IMessagingContext messagingContext;
         private readonly TestMessageHandler messageHandler;
         private readonly ManualResetEventSlim receiveEvent;
@@ -21,7 +21,7 @@ namespace HyperMsg.Transport.Http
             messageHandler = new();
             receiveEvent = new();
             waitTimeout = TimeSpan.FromSeconds(5);
-            host = Host.CreateDefault(services => services.AddHttpTransport(new (messageHandler)));
+            host = ServiceHost.CreateDefault(services => services.AddHttpTransport(new (messageHandler)));
             host.StartAsync().Wait();
             messagingContext = host.GetRequiredService<IMessagingContext>();
         }
@@ -31,7 +31,7 @@ namespace HyperMsg.Transport.Http
         {
             var request = new HttpRequestMessage(HttpMethod.Get, "https://www.hostname.com");
             var response = default(HttpResponseMessage);
-            messagingContext.Observable.OnReceived<HttpResponseMessage>(r =>
+            messagingContext.HandlersRegistry.RegisterReceiveHandler<HttpResponseMessage>(r =>
             {
                 response = r;
                 receiveEvent.Set();
@@ -48,8 +48,8 @@ namespace HyperMsg.Transport.Http
         public async Task Emits_Exception_For_Incorrect_Request()
         {
             var request = new HttpRequestMessage(HttpMethod.Get, $"https://{Guid.NewGuid()}.com");
-            var exception = default(HttpRequestException);            
-            messagingContext.Observable.AddObserver<HttpRequestException>(ex =>
+            var exception = default(HttpRequestException);
+            messagingContext.HandlersRegistry.RegisterReceiveHandler<HttpRequestException>(ex =>
             {
                 exception = ex;
                 receiveEvent.Set();

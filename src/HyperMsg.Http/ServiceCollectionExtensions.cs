@@ -1,7 +1,7 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using System.Net.Http;
 
-namespace HyperMsg.Transport.Http
+namespace HyperMsg.Http
 {
     public static class ServiceCollectionExtensions
     {

@@ -1,11 +1,12 @@
 ﻿using Microsoft.Extensions.Hosting;
+using System;
 using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace HyperMsg.Transport.Sockets
+namespace HyperMsg.Sockets
 {
-    internal class SocketDataReceiver : MessagingObject, IHostedService
+    internal class SocketDataTransferringService : MessagingObject, IHostedService
     {        
         private readonly IBuffer receivingBuffer;
 
@@ -15,27 +16,30 @@ namespace HyperMsg.Transport.Sockets
         private readonly object disposeSync = new object();
         private bool isDisposed = false;
 
-        public SocketDataReceiver(IMessagingContext messagingContext, IBufferContext bufferContext, Socket socket) : base(messagingContext)
+        public SocketDataTransferringService(IMessagingContext messagingContext, IBufferContext bufferContext, SocketConnectionService socketService) : base(messagingContext)
         {            
             receivingBuffer = bufferContext.ReceivingBuffer;
 
-            this.socket = socket;
+            socket = socketService.Socket;
+            socketService.Connected = OnSocketConnected;
             socketEventArgs = new SocketAsyncEventArgs();
             socketEventArgs.Completed += DataReceivingCompleted;
-            AddHandler<TransportEvent>(HandleTransportEvent);
+            RegisterTransmitHandler<ReadOnlyMemory<byte>>(TransmitDataAsync);
         }
 
-        public void HandleTransportEvent(TransportEvent transportEvent)
+        private async Task TransmitDataAsync(ReadOnlyMemory<byte> data, CancellationToken cancellationToken)
         {
-            if (transportEvent == TransportEvent.Opened)
+            await socket.SendAsync(data, SocketFlags.None, cancellationToken);
+        }
+
+        private void OnSocketConnected()
+        {
+            ResetBuffer();
+            while (!socket.ReceiveAsync(socketEventArgs))
             {
+                AdvanceAndFlushBuffer();
                 ResetBuffer();
-                while (!socket.ReceiveAsync(socketEventArgs))
-                {
-                    AdvanceAndFlushBuffer();
-                    ResetBuffer();
-                }
-            }
+            }            
         }
 
         private void DataReceivingCompleted(object sender, SocketAsyncEventArgs e)
@@ -52,7 +56,7 @@ namespace HyperMsg.Transport.Sockets
             }
 
             receivingBuffer.Writer.Advance(socketEventArgs.BytesTransferred);
-            Received(receivingBuffer);
+            Receive(receivingBuffer);
         }
 
         private void ResetBuffer()
