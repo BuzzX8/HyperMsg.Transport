@@ -2,7 +2,7 @@
 using System;
 using System.Net;
 
-namespace HyperMsg.Sockets
+namespace HyperMsg.Sockets.Extensions
 {
     public static class ServiceCollectionExtensions
     {
@@ -29,5 +29,15 @@ namespace HyperMsg.Sockets
         public static IServiceCollection AddSocketConnection(this IServiceCollection services, IPAddress address, int port) => services.AddSocketServices(() => new IPEndPoint(address, port));
 
         public static IServiceCollection AddLocalSocketConnection(this IServiceCollection services, int port) => services.AddSocketConnection(IPAddress.Loopback, port);
+
+        public static IServiceCollection AddSocketConnectionListener(this IServiceCollection services, EndPoint listeningEndpoint, int backlog = 1)
+        {
+            return services.AddHostedService(provider =>
+            {
+                var messagingContext = provider.GetRequiredService<IMessagingContext>();
+                
+                return new SocketConnectionListeneningService(messagingContext, SocketFactory.CreateTcpSocket, listeningEndpoint, backlog);
+            });
+        }
     }
 }

@@ -7,78 +7,53 @@ using System.Threading.Tasks;
 namespace HyperMsg.Sockets
 {
     internal class SocketDataTransferringService : MessagingObject, IHostedService
-    {        
+    {
+        private CancellationTokenSource tokenSource = new();
         private readonly IBuffer receivingBuffer;
-
         private readonly Socket socket;
-        private readonly SocketAsyncEventArgs socketEventArgs;
-
-        private readonly object disposeSync = new object();
-        private bool isDisposed = false;
+        private ValueTask<int> currentReceiveTask;
 
         public SocketDataTransferringService(IMessagingContext messagingContext, IBufferContext bufferContext, SocketConnectionService socketService) : base(messagingContext)
         {            
             receivingBuffer = bufferContext.ReceivingBuffer;
-
             socket = socketService.Socket;
-            socketService.Connected = OnSocketConnected;
-            socketEventArgs = new SocketAsyncEventArgs();
-            socketEventArgs.Completed += DataReceivingCompleted;
+            socketService.Connected = OnConnected;
+            socketService.Closing = OnSocketClosing;
             RegisterTransmitHandler<ReadOnlyMemory<byte>>(TransmitDataAsync);
         }
 
-        private async Task TransmitDataAsync(ReadOnlyMemory<byte> data, CancellationToken cancellationToken)
+        private async Task TransmitDataAsync(ReadOnlyMemory<byte> data, CancellationToken cancellationToken) => await socket.SendAsync(data, SocketFlags.None, cancellationToken);
+
+        private void OnConnected()
         {
-            await socket.SendAsync(data, SocketFlags.None, cancellationToken);
+            tokenSource = new();
+            ReceiveData();
         }
 
-        private void OnSocketConnected()
-        {
-            ResetBuffer();
-            while (!socket.ReceiveAsync(socketEventArgs))
-            {
-                AdvanceAndFlushBuffer();
-                ResetBuffer();
-            }            
-        }
-
-        private void DataReceivingCompleted(object sender, SocketAsyncEventArgs e)
-        {
-            AdvanceAndFlushBuffer();
-            ResetBuffer();
-        }
-
-        private void AdvanceAndFlushBuffer()
-        {
-            if (socketEventArgs.BytesTransferred == 0)
-            {
-                return;
-            }
-
-            receivingBuffer.Writer.Advance(socketEventArgs.BytesTransferred);
-            Receive(receivingBuffer);
-        }
-
-        private void ResetBuffer()
-        {
+        private void ReceiveData()
+        {            
             var memory = receivingBuffer.Writer.GetMemory();
-
-            lock (disposeSync)
+            currentReceiveTask = socket.ReceiveAsync(memory, SocketFlags.None, tokenSource.Token);
+            currentReceiveTask.GetAwaiter().OnCompleted(() =>
             {
-                if (!isDisposed)
+                if (tokenSource.IsCancellationRequested)
                 {
-                    socketEventArgs.SetBuffer(memory);
+                    return;
                 }
-            }
+
+                var bytesReceived = currentReceiveTask.Result;
+                receivingBuffer.Writer.Advance(bytesReceived);
+                Receive(receivingBuffer);
+                ReceiveData();
+            });
         }
+
+        private void OnSocketClosing() => tokenSource.Cancel();
 
         public override void Dispose()
         {
-            lock (disposeSync)
-            {
-                socketEventArgs.Dispose();
-                isDisposed = true;
-            }
+            base.Dispose();
+            tokenSource.Dispose();
         }
 
         public Task StartAsync(CancellationToken cancellationToken) => Task.CompletedTask;

@@ -1,8 +1,10 @@
 ﻿using HyperMsg.Connection;
 using HyperMsg.Extensions;
+using HyperMsg.Sockets.Extensions;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Buffers;
+using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading;
@@ -18,84 +20,96 @@ namespace HyperMsg.Sockets
 
         private readonly ServiceHost host;
         private readonly IMessageSender messageSender;
-
-        private readonly Socket listeningSocket;
+        
         private Socket acceptedSocket;
 
-        private readonly ManualResetEventSlim transmitEvent = new();
-        private readonly ManualResetEventSlim receiveEvent = new();
-        
-        private byte[] receivedData;
+        private readonly ManualResetEventSlim acceptEvent = new();
 
         public SocketTransportTests()
         {
-            listeningSocket = new Socket(SocketType.Stream, ProtocolType.Tcp);
-            listeningSocket.Bind(new IPEndPoint(IPAddress.Loopback, Port));
+            var listeningEndpoint = new IPEndPoint(IPAddress.Loopback, Port);
 
-            host = ServiceHost.CreateDefault(services => services.AddLocalSocketConnection(Port));
+            host = ServiceHost.CreateDefault(services => services.AddLocalSocketConnection(Port)
+                .AddSocketConnectionListener(listeningEndpoint));
             host.StartAsync().Wait();
             messageSender = host.GetRequiredService<IMessageSender>();
             var registry = host.GetRequiredService<IMessageHandlersRegistry>();
-            registry.RegisterReceiveHandler<IBuffer>(buffer =>
+            
+            registry.RegisterAcceptedSocketHandler(socket =>
             {
-                receivedData = buffer.Reader.Read().ToArray();
-                receiveEvent.Set();
+                acceptedSocket = socket;
+                acceptEvent.Set();
+                return true;
             });
         }
 
         [Fact]
         public async Task TransmitBufferDataAsync_Transmits_Buffer_Content_With_Socket_Transport()
         {
-            var transmittingData = Guid.NewGuid().ToByteArray();
+            var transmittedMessages = new List<Guid>();
+            var receivedMessages = new List<Guid>();
+
             await OpenConnectionAsync();
+            
+            var receiveBuffer = new byte[16];
 
-            Assert.NotNull(acceptedSocket);
-            await TransmittAsync(transmittingData);
+            for (int i = 0; i < 10; i++)
+            {
+                var transmittingData = Guid.NewGuid();
+                await messageSender.TransmitAsync<ReadOnlyMemory<byte>>(transmittingData.ToByteArray(), default);
+                transmittedMessages.Add(transmittingData);
+                
+                acceptedSocket.ReceiveAsync(receiveBuffer, SocketFlags.None).Wait(waitTimeout);
+                receivedMessages.Add(new Guid(receiveBuffer));
+            }
 
-            var actualData = new byte[transmittingData.Length];
-            await acceptedSocket.ReceiveAsync(actualData, SocketFlags.None);
-
-            Assert.Equal(transmittingData, actualData);
+            Assert.Equal(transmittedMessages, receivedMessages);
         }
 
         [Fact]
         public async Task Invokes_Buffer_Data_Receiver_When_Receiving_Data_With_Socket_Transport()
         {
-            var transmittingData = Guid.NewGuid().ToByteArray();
+            var transmittedMessages = new List<Guid>();
+            var receivedMessages = new List<Guid>();
+            var receiveEvent = new ManualResetEventSlim();
+            var handlersRegistry = host.GetRequiredService<IMessageHandlersRegistry>();
+            handlersRegistry.RegisterReceiveHandler<IBuffer>(buffer =>
+            {
+                var message = new Guid(buffer.Reader.Read().ToArray());
+                receivedMessages.Add(message);
+                buffer.Clear();
+                receiveEvent.Set();
+            });
+
             await OpenConnectionAsync();
 
-            acceptedSocket.Send(transmittingData);
-            receiveEvent.Wait(waitTimeout);
+            for (int i = 0; i < 10; i++)
+            {
+                var transmittingData = Guid.NewGuid();
+                await acceptedSocket.SendAsync(transmittingData.ToByteArray(), SocketFlags.None);
+                transmittedMessages.Add(transmittingData);
+                receiveEvent.Wait(500);
+                receiveEvent.Reset();
+            }
 
-            Assert.Equal(transmittingData, receivedData);
+            Assert.Equal(transmittedMessages, receivedMessages);
         }
 
         private async Task OpenConnectionAsync()
         {
-            listeningSocket.Listen();
-            
-            var acceptTask = listeningSocket.AcceptAsync();
+            await messageSender.SendAsync(ConnectionListeneningCommand.StartListening, default);
             await messageSender.SendAsync(ConnectionCommand.Open, default);
-            acceptTask.Wait(waitTimeout);
-            Assert.True(acceptTask.IsCompleted);
+            acceptEvent.Wait(waitTimeout);
 
-            acceptedSocket = acceptTask.Result;
-        }
-
-        private async Task TransmittAsync(byte[] data)
-        {
-            var bufferContext = host.Services.GetRequiredService<IBufferContext>();
-            var buffer = bufferContext.TransmittingBuffer;
-
-            buffer.Writer.Write(data);
-            await messageSender.TransmitAsync(buffer, default);
-            transmitEvent.Set();            
+            Assert.True(acceptEvent.IsSet);
+            Assert.NotNull(acceptedSocket);
         }
 
         public void Dispose()
         {
+            messageSender.Send(ConnectionCommand.Close);
+            messageSender.Send(ConnectionListeneningCommand.StopListening);
             host.Dispose();
-            listeningSocket.Dispose();
             acceptedSocket?.Dispose();
         }
     }

@@ -54,6 +54,7 @@ namespace HyperMsg.Sockets
                 return;
             }
 
+            Closing?.Invoke();
             await SendAsync(ConnectionEvent.Closing, cancellationToken);
             socket.Shutdown(SocketShutdown.Both);
             socket.Close();
@@ -102,7 +103,15 @@ namespace HyperMsg.Sockets
             return stream;
         }
 
+        public override void Dispose()
+        {
+            base.Dispose();            
+            socket.Dispose();
+        }
+
         public Action Connected;
+
+        public Action Closing;
 
         public Action<RemoteCertificateValidationEventArgs> RemoteCertificateValidationRequired;
     }
