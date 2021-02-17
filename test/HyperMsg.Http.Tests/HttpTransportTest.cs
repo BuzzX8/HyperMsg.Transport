@@ -1,4 +1,5 @@
 ﻿using HyperMsg.Extensions;
+using HyperMsg.Http.Extensions;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Net.Http;
