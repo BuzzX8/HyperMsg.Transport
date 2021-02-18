@@ -1,4 +1,4 @@
-﻿namespace HyperMsg.Connection
+﻿namespace HyperMsg.Transport
 {
     public enum ConnectionEvent
     {

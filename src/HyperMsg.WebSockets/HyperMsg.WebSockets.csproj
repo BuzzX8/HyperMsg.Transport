@@ -9,7 +9,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\HyperMsg.Connection\HyperMsg.Connection.csproj" />
+    <ProjectReference Include="..\HyperMsg.Transport\HyperMsg.Transport.csproj" />
   </ItemGroup>
 
   <ItemGroup>

@@ -8,13 +8,22 @@ namespace HyperMsg.WebSockets.Extensions
     {
         public static IServiceCollection AddWebSocketConnection(this IServiceCollection services, Uri uri, Action<ClientWebSocketOptions> webSocketConfigurator)
         {
-            return services.AddSingleton(provider =>
-            {
-                var messagingContext = provider.GetRequiredService<IMessagingContext>();
-                var webSocket = new ClientWebSocket();
-                webSocketConfigurator.Invoke(webSocket.Options);
-                return new WebSocketConnectionService(webSocket, uri, messagingContext);
-            }).AddHostedService<WebSocketDataTransferService>();
+            return services.AddSingleton<ClientWebSocket>()
+                .AddHostedService(provider =>
+                {
+                    var messagingContext = provider.GetRequiredService<IMessagingContext>();
+                    var webSocket = provider.GetRequiredService<ClientWebSocket>();
+                    webSocketConfigurator.Invoke(webSocket.Options);
+                    return new WebSocketConnectionService(webSocket, uri, messagingContext);
+                })
+                .AddHostedService(provider =>
+                {
+                    var clientWebSocket = provider.GetRequiredService<ClientWebSocket>();
+                    var messagingContext = provider.GetRequiredService<IMessagingContext>();
+                    var bufferContext = provider.GetRequiredService<IBufferContext>();
+
+                    return new WebSocketDataTransferService(clientWebSocket, bufferContext.ReceivingBuffer, messagingContext);
+                });
         }
     }
 }

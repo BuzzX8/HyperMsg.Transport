@@ -1,4 +1,4 @@
-﻿using HyperMsg.Connection;
+﻿using HyperMsg.Transport;
 using Microsoft.Extensions.Hosting;
 using System;
 using System.Net.WebSockets;
@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace HyperMsg.WebSockets
 {
-    public class WebSocketConnectionService : MessagingObject, IHostedService
+    public class WebSocketConnectionService : ConnectionService, IHostedService
     {
         private readonly ClientWebSocket webSocket;
         private readonly Uri uri;
@@ -16,8 +16,6 @@ namespace HyperMsg.WebSockets
         {
             this.webSocket = webSocket;
             this.uri = uri;
-            RegisterHandler(ConnectionCommand.Open, OpenAsync);
-            RegisterHandler(ConnectionCommand.Close, CloseAsync);
         }
 
         internal ClientWebSocket WebSocket => webSocket;
@@ -26,15 +24,8 @@ namespace HyperMsg.WebSockets
 
         public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
 
-        private async Task OpenAsync(CancellationToken cancellationToken)
-        {
-            await webSocket.ConnectAsync(uri, cancellationToken);
-            await SendAsync(ConnectionEvent.Opened, cancellationToken);
-        }
+        protected override Task OpenConnectionAsync(CancellationToken cancellationToken) => webSocket.ConnectAsync(uri, cancellationToken);
 
-        private Task CloseAsync(CancellationToken cancellationToken)
-        {
-            return webSocket.CloseAsync(WebSocketCloseStatus.Empty, string.Empty, cancellationToken);
-        }
+        protected override Task CloseConnectionAsync(CancellationToken cancellationToken) => webSocket.CloseAsync(WebSocketCloseStatus.Empty, string.Empty, cancellationToken);
     }
 }

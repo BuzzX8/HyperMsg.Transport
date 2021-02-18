@@ -1,4 +1,4 @@
-﻿using HyperMsg.Connection;
+﻿using HyperMsg.Transport;
 using HyperMsg.Extensions;
 using HyperMsg.Http.Extensions;
 using HyperMsg.WebSockets.Extensions;
@@ -59,7 +59,7 @@ namespace HyperMsg.WebSockets
             for (int i = 0; i < 10; i++)
             {
                 var transmittingData = Guid.NewGuid();
-                await messageSender.TransmitAsync<ReadOnlyMemory<byte>>(transmittingData.ToByteArray(), default);
+                await messageSender.TransmitAsync(transmittingData.ToByteArray(), default);
                 transmittedMessages.Add(transmittingData);
 
                 acceptedSocket.ReceiveAsync(receiveBuffer, default).Wait(waitTimeout);

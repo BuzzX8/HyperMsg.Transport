@@ -1,4 +1,5 @@
-﻿using HyperMsg.Connection;
+﻿using HyperMsg.Transport;
+using Microsoft.Extensions.Hosting;
 using System;
 using System.IO;
 using System.Net;
@@ -10,7 +11,7 @@ using System.Threading.Tasks;
 
 namespace HyperMsg.Sockets
 {
-    internal class SocketConnectionService : MessagingObject
+    internal class SocketConnectionService : ConnectionService, IHostedService
     {
         private readonly Socket socket;
         private readonly Lazy<EndPoint> endPoint;
@@ -20,10 +21,6 @@ namespace HyperMsg.Sockets
         {
             this.socket = socket ?? throw new ArgumentNullException(nameof(socket));
             endPoint = new Lazy<EndPoint>(endpointProvider) ?? throw new ArgumentNullException(nameof(endPoint));
-
-            RegisterHandler(ConnectionCommand.Open, OpenAsync);
-            RegisterHandler(ConnectionCommand.Close, CloseAsync);
-            RegisterHandler(ConnectionCommand.SetTransportLevelSecurity, SetTls);
         }
 
         public bool ValidateAllCertificates { get; }
@@ -34,36 +31,31 @@ namespace HyperMsg.Sockets
 
         private bool IsOpen => socket.Connected;
 
-        private async Task OpenAsync(CancellationToken cancellationToken)
+        protected override Task OpenConnectionAsync(CancellationToken cancellationToken)
         {
             if (IsOpen)
             {
-                return;
+                return Task.CompletedTask;
             }
-
-            await SendAsync(ConnectionEvent.Opening, cancellationToken);
+                        
             socket.Connect(endPoint.Value);
-            Connected?.Invoke();
-            await SendAsync(ConnectionEvent.Opened, cancellationToken);            
+            return Task.CompletedTask;
         }
 
-        private async Task CloseAsync(CancellationToken cancellationToken)
+        protected override Task CloseConnectionAsync(CancellationToken cancellationToken)
         {
             if (!IsOpen)
             {
-                return;
-            }
-
-            Closing?.Invoke();
-            await SendAsync(ConnectionEvent.Closing, cancellationToken);
+                return Task.CompletedTask;
+            }                        
+            
             socket.Shutdown(SocketShutdown.Both);
             socket.Close();
-            await SendAsync(ConnectionEvent.Closed, cancellationToken);
 
-            return;
+            return Task.CompletedTask;
         }        
 
-        private void SetTls()
+        protected override Task SetTransportLevelSecurityAsync(CancellationToken _)
         {
             if (stream == null)
             {
@@ -72,12 +64,14 @@ namespace HyperMsg.Sockets
 
             if (stream is SslStream)
             {
-                return;
+                return Task.CompletedTask;
             }
 
             var sslStream = new SslStream(stream, false, ValidateRemoteCertificate);
             sslStream.AuthenticateAsClient(endPoint.ToString());
             stream = sslStream;
+
+            return Task.CompletedTask;
         }
 
         private bool ValidateRemoteCertificate(object sender, X509Certificate certificate, X509Chain chain, SslPolicyErrors sslPolicyErrors)
@@ -109,9 +103,9 @@ namespace HyperMsg.Sockets
             socket.Dispose();
         }
 
-        public Action Connected;
+        public Task StartAsync(CancellationToken cancellationToken) => Task.CompletedTask;
 
-        public Action Closing;
+        public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
 
         public Action<RemoteCertificateValidationEventArgs> RemoteCertificateValidationRequired;
     }

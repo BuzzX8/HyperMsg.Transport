@@ -9,12 +9,18 @@ namespace HyperMsg.Sockets.Extensions
         private static IServiceCollection AddSocketServices(this IServiceCollection services, Func<EndPoint> endpointProvider)
         {
             var socket = SocketFactory.CreateTcpSocket();
-            return services.AddSingleton(provider =>
+            return services.AddHostedService(provider =>
             {
                 var context = provider.GetRequiredService<IMessagingContext>();
 
                 return new SocketConnectionService(context, socket, endpointProvider);
-            }).AddHostedService<SocketDataTransferringService>();
+            })
+            .AddHostedService(provider =>
+            {
+                var bufferContext = provider.GetRequiredService<IBufferContext>();
+                var messagingContext = provider.GetRequiredService<IMessagingContext>();
+                return new SocketDataTransferService(socket, bufferContext.ReceivingBuffer, messagingContext);
+            });
         }
 
         public static IServiceCollection AddSocketConnection(this IServiceCollection services, string hostName, int port)

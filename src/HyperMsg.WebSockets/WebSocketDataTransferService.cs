@@ -1,4 +1,4 @@
-﻿using HyperMsg.Connection;
+﻿using HyperMsg.Transport;
 using Microsoft.Extensions.Hosting;
 using System;
 using System.Net.WebSockets;
@@ -7,33 +7,29 @@ using System.Threading.Tasks;
 
 namespace HyperMsg.WebSockets
 {
-    public class WebSocketDataTransferService : MessagingObject, IHostedService
+    public class WebSocketDataTransferService : DataTransferService, IHostedService
     {
         private readonly ClientWebSocket webSocket;
         private readonly IBuffer receivingBuffer;
 
-        ValueTask<ValueWebSocketReceiveResult> currentReceiveTask;
+        private ValueTask<ValueWebSocketReceiveResult> currentReceiveTask;
 
-        public WebSocketDataTransferService(IBufferContext bufferContext, WebSocketConnectionService connectionService, IMessagingContext messagingContext) : base(messagingContext)
+        public WebSocketDataTransferService(ClientWebSocket webSocket, IBuffer receivingBuffer, IMessagingContext messagingContext) : base(messagingContext)
         {
-            webSocket = connectionService.WebSocket;
-            receivingBuffer = bufferContext.ReceivingBuffer;
-            RegisterHandler(ConnectionEvent.Opened, OnConnected);
-            RegisterTransmitHandler<ReadOnlyMemory<byte>>(TransmitDataAsync);
+            this.webSocket = webSocket;
+            this.receivingBuffer = receivingBuffer;
         }
 
         public Task StartAsync(CancellationToken cancellationToken) => Task.CompletedTask;
 
         public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
 
-        private async Task TransmitDataAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken)
-        {
-            await webSocket.SendAsync(buffer, WebSocketMessageType.Binary, false, cancellationToken);
-        }
+        protected override async Task TransmitDataAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken) => await webSocket.SendAsync(buffer, WebSocketMessageType.Binary, false, cancellationToken);
 
-        private void OnConnected()
+        protected override Task OnConnectionOpenedAsync(CancellationToken cancellationToken)
         {
             ReceiveAsync();
+            return Task.CompletedTask;
         }
 
         private void ReceiveAsync()

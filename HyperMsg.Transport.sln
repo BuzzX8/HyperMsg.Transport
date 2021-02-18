@@ -11,7 +11,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "HyperMsg.Sockets", "src\Hyp
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "HyperMsg.Sockets.Tests", "test\HyperMsg.Sockets.Tests\HyperMsg.Sockets.Tests.csproj", "{2DEE2996-187D-4E63-8719-6001D76171EB}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "HyperMsg.Connection", "src\HyperMsg.Connection\HyperMsg.Connection.csproj", "{9DF6FCDA-977F-4856-9EAB-8F5150D72A4C}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "HyperMsg.Connection", "src\HyperMsg.Transport\HyperMsg.Transport.csproj", "{9DF6FCDA-977F-4856-9EAB-8F5150D72A4C}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "HyperMsg.Http", "src\HyperMsg.Http\HyperMsg.Http.csproj", "{45541178-49C4-43C1-976A-5EAEFB6C29E9}"
 EndProject
