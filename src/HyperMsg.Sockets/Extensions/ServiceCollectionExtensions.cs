@@ -6,14 +6,14 @@ namespace HyperMsg.Sockets.Extensions
 {
     public static class ServiceCollectionExtensions
     {
-        private static IServiceCollection AddSocketServices(this IServiceCollection services, Func<EndPoint> endpointProvider)
+        private static IServiceCollection AddSocketServices(this IServiceCollection services, Func<EndPoint> endpointProvider = null)
         {
             var socket = SocketFactory.CreateTcpSocket();
             return services.AddHostedService(provider =>
             {
                 var context = provider.GetRequiredService<IMessagingContext>();
 
-                return new SocketConnectionService(context, socket, endpointProvider);
+                return new SocketConnectionService(context, socket, endpointProvider ?? DefaultProvider);
             })
             .AddHostedService(provider =>
             {
@@ -22,6 +22,8 @@ namespace HyperMsg.Sockets.Extensions
                 return new SocketDataTransferService(socket, bufferContext.ReceivingBuffer, messagingContext);
             });
         }
+
+        private static EndPoint DefaultProvider() => throw new InvalidOperationException("End point does not provided.");
 
         public static IServiceCollection AddSocketConnection(this IServiceCollection services, string hostName, int port)
         {

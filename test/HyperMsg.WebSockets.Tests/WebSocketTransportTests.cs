@@ -32,7 +32,7 @@ namespace HyperMsg.WebSockets
         {
             host = ServiceHost.CreateDefault(services =>
             {
-                services.AddWebSocketConnection(uri, options => options.AddSubProtocol("test-proto"))
+                services.AddWebSocketConnection(options => options.AddSubProtocol("test-proto"), uri)
                     .AddHttpListener(new Uri("http://localhost:9090"));
             });
             messageSender = host.GetRequiredService<IMessageSender>();

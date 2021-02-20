@@ -14,20 +14,19 @@ namespace HyperMsg.Sockets
     internal class SocketConnectionService : ConnectionService, IHostedService
     {
         private readonly Socket socket;
-        private readonly Lazy<EndPoint> endPoint;
+        private Lazy<EndPoint> endPoint;
         private Stream stream;
 
         public SocketConnectionService(IMessagingContext messagingContext, Socket socket, Func<EndPoint> endpointProvider) : base(messagingContext)
         {
             this.socket = socket ?? throw new ArgumentNullException(nameof(socket));
             endPoint = new Lazy<EndPoint>(endpointProvider) ?? throw new ArgumentNullException(nameof(endPoint));
+                        
+            RegisterSetEndpointHandler<EndPoint>(SetEndpoint);
+            RegisterSetEndpointHandler<IPEndPoint>(SetEndpoint);
         }
 
         public bool ValidateAllCertificates { get; }
-
-        public Socket Socket => socket;
-
-        public Stream Stream => GetStream();
 
         private bool IsOpen => socket.Connected;
 
@@ -96,6 +95,13 @@ namespace HyperMsg.Sockets
 
             return stream;
         }
+
+        private void SetEndpoint(EndPoint endPoint)
+        {
+            this.endPoint = new Lazy<EndPoint>(() => endPoint);
+        }
+
+        private void SetEndpoint(IPEndPoint endPoint) => this.endPoint = new Lazy<EndPoint>(() => endPoint);
 
         public override void Dispose()
         {

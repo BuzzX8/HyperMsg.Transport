@@ -33,8 +33,8 @@ namespace HyperMsg.Sockets
                 .AddSocketConnectionListener(listeningEndpoint));
             host.StartAsync().Wait();
             messageSender = host.GetRequiredService<IMessageSender>();
-            var registry = host.GetRequiredService<IMessageHandlersRegistry>();
             
+            var registry = host.GetRequiredService<IMessageHandlersRegistry>();            
             registry.RegisterAcceptedSocketHandler(socket =>
             {
                 acceptedSocket = socket;
@@ -48,7 +48,7 @@ namespace HyperMsg.Sockets
         {
             var transmittedMessages = new List<Guid>();
             var receivedMessages = new List<Guid>();
-
+            
             await OpenConnectionAsync();
             
             var receiveBuffer = new byte[16];

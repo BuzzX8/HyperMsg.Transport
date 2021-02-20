@@ -1,4 +1,6 @@
-﻿using System.Threading;
+﻿using HyperMsg.Transport.Extensions;
+using System;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace HyperMsg.Transport
@@ -31,5 +33,9 @@ namespace HyperMsg.Transport
         protected abstract Task CloseConnectionAsync(CancellationToken cancellationToken);
 
         protected virtual Task SetTransportLevelSecurityAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+
+        protected void RegisterSetEndpointHandler<TEndpoint>(Action<TEndpoint> setEndpointHandler) => RegisterDisposable(HandlerRegistry.RegisterSetEndpointHandler(setEndpointHandler));
+
+        protected void RegisterSetEndpointHandler<TEndpoint>(AsyncAction<TEndpoint> setEndpointHandler) => RegisterDisposable(HandlerRegistry.RegisterSetEndpointHandler(setEndpointHandler));
     }
 }

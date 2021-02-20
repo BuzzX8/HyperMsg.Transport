@@ -6,7 +6,7 @@ namespace HyperMsg.WebSockets.Extensions
 {
     public static class ServiceCollectionExtensions
     {
-        public static IServiceCollection AddWebSocketConnection(this IServiceCollection services, Uri uri, Action<ClientWebSocketOptions> webSocketConfigurator)
+        public static IServiceCollection AddWebSocketConnection(this IServiceCollection services, Action<ClientWebSocketOptions> webSocketConfigurator, Uri uri = null)
         {
             return services.AddSingleton<ClientWebSocket>()
                 .AddHostedService(provider =>
