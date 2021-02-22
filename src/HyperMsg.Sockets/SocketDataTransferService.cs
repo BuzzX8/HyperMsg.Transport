@@ -12,8 +12,7 @@ namespace HyperMsg.Sockets
         private readonly IBuffer receivingBuffer;
         private readonly Socket socket;
 
-        private CancellationTokenSource tokenSource = new();
-        private ValueTask<int> currentReceiveTask;
+        private SocketAsyncEventArgs eventArgs;
 
         public SocketDataTransferService(Socket socket, IBuffer receivingBuffer, IMessagingContext messagingContext) : base(messagingContext)
         {            
@@ -25,39 +24,66 @@ namespace HyperMsg.Sockets
 
         protected override Task OnConnectionOpenedAsync(CancellationToken _)
         {
-            tokenSource = new();
-            ReceiveData();
+            eventArgs = new();            
+            eventArgs.Completed += OnSocketReceiveCompleted;
+            
+            ResetBuffer();
+            Task.Run(ReceiveData).ContinueWith(OnBootstrapCompleted);
             return Task.CompletedTask;
         }
 
         private void ReceiveData()
         {            
-            var memory = receivingBuffer.Writer.GetMemory();
-            currentReceiveTask = socket.ReceiveAsync(memory, SocketFlags.None, tokenSource.Token);
-            currentReceiveTask.GetAwaiter().OnCompleted(() =>
+            if (!socket.ReceiveAsync(eventArgs) && socket.Connected)
             {
-                if (tokenSource.IsCancellationRequested)
-                {
-                    return;
-                }
+                OnSocketReceiveCompleted(this, eventArgs);
+            }            
+        }
 
-                var bytesReceived = currentReceiveTask.Result;
+        private void OnBootstrapCompleted(Task receiveTask)
+        {
+            if (!receiveTask.IsCompletedSuccessfully && receiveTask.Exception != null)
+            {
+                receiveTask.Exception.Flatten();
+                var exception = receiveTask.Exception.InnerException;
+                Send(exception);
+            }
+        }
+
+        private void OnSocketReceiveCompleted(object sender, SocketAsyncEventArgs eventArgs)
+        {
+            if (!socket.Connected)
+            {
+                return;
+            }
+
+            var bytesReceived = eventArgs.BytesTransferred;
+
+            if (bytesReceived > 0)
+            {
                 receivingBuffer.Writer.Advance(bytesReceived);
-                Receive(receivingBuffer);
-                ReceiveData();
-            });
+                ReceiveAsync(receivingBuffer, default).ContinueWith(t =>
+                {
+                    ResetBuffer();
+                    ReceiveData();
+                });
+
+                return;
+            }
+
+            ReceiveData();
+        }
+
+        private void ResetBuffer()
+        {
+            var memory = receivingBuffer.Writer.GetMemory();
+            eventArgs.SetBuffer(memory);
         }
 
         protected override Task OnConnectionClosingAsync(CancellationToken _)
         {
-            tokenSource.Cancel();
+            eventArgs?.Dispose();
             return Task.CompletedTask;
-        }
-
-        public override void Dispose()
-        {
-            base.Dispose();
-            tokenSource.Dispose();
         }
 
         public Task StartAsync(CancellationToken _) => Task.CompletedTask;

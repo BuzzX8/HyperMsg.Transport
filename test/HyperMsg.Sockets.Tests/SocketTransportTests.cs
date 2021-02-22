@@ -10,6 +10,7 @@ using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
 using Xunit;
+using System.Linq;
 
 namespace HyperMsg.Sockets
 {
@@ -17,6 +18,7 @@ namespace HyperMsg.Sockets
     {
         private readonly TimeSpan waitTimeout = TimeSpan.FromSeconds(5);
         private readonly int Port = 8888;
+        private const int IterationCount = 1000;
 
         private readonly ServiceHost host;
         private readonly IMessageSender messageSender;
@@ -53,7 +55,7 @@ namespace HyperMsg.Sockets
             
             var receiveBuffer = new byte[16];
 
-            for (int i = 0; i < 10; i++)
+            for (int i = 0; i < IterationCount; i++)
             {
                 var transmittingData = Guid.NewGuid();
                 await messageSender.TransmitAsync(transmittingData.ToByteArray(), default);
@@ -83,12 +85,14 @@ namespace HyperMsg.Sockets
 
             await OpenConnectionAsync();
 
-            for (int i = 0; i < 10; i++)
+            for (int i = 0; i < IterationCount; i++)
             {
                 var transmittingData = Guid.NewGuid();
                 await acceptedSocket.SendAsync(transmittingData.ToByteArray(), SocketFlags.None);
                 transmittedMessages.Add(transmittingData);
-                receiveEvent.Wait(500);
+
+                Assert.True(receiveEvent.Wait(1000));                
+
                 receiveEvent.Reset();
             }
 
