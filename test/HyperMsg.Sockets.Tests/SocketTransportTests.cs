@@ -11,6 +11,9 @@ using System.Threading;
 using System.Threading.Tasks;
 using Xunit;
 using System.Linq;
+using System.Net.Security;
+using HyperMsg.Sockets.Properties;
+using System.Security.Cryptography.X509Certificates;
 
 namespace HyperMsg.Sockets
 {
@@ -97,6 +100,19 @@ namespace HyperMsg.Sockets
             }
 
             Assert.Equal(transmittedMessages, receivedMessages);
+        }
+
+        [Fact]
+        public async Task SetTls_()
+        {
+            await OpenConnectionAsync();
+
+            var sslStream = new SslStream(new NetworkStream(acceptedSocket));
+            var sslTask = messageSender.SendAsync(ConnectionCommand.SetTransportLevelSecurity, default);
+            var certificate = new X509Certificate(Resources.cert);
+            sslStream.AuthenticateAsServer(certificate, false, false);
+
+            Assert.True(sslTask.IsCompletedSuccessfully);
         }
 
         private async Task OpenConnectionAsync()
