@@ -82,7 +82,11 @@ namespace HyperMsg.Sockets
         {
             if (!socket.Connected)
             {
-                socket.Disconnect(true);
+                if (eventArgs.SocketError != SocketError.OperationAborted)
+                {
+                    socket.Disconnect(true);
+                }
+
                 Send(ConnectionEvent.Closed);
                 return;
             }

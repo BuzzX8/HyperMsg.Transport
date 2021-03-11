@@ -63,9 +63,9 @@ namespace HyperMsg.Sockets.Properties {
         /// <summary>
         ///   Looks up a localized resource of type System.Byte[].
         /// </summary>
-        internal static byte[] cert {
+        internal static byte[] cacert {
             get {
-                object obj = ResourceManager.GetObject("cert", resourceCulture);
+                object obj = ResourceManager.GetObject("cacert", resourceCulture);
                 return ((byte[])(obj));
             }
         }

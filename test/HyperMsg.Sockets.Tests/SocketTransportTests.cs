@@ -109,7 +109,7 @@ namespace HyperMsg.Sockets
 
             var sslStream = new SslStream(new NetworkStream(acceptedSocket));
             var sslTask = messageSender.SendAsync(ConnectionCommand.SetTransportLevelSecurity, default);
-            var certificate = new X509Certificate(Resources.cert);
+            var certificate = new X509Certificate(Resources.cacert, "1234");
             sslStream.AuthenticateAsServer(certificate, false, false);
 
             Assert.True(sslTask.IsCompletedSuccessfully);

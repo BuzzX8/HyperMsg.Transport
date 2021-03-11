@@ -63,48 +63,6 @@ namespace HyperMsg.Sockets
             socket.Disconnect(true);
 
             return Task.CompletedTask;
-        }        
-
-        //protected override Task SetTransportLevelSecurityAsync(CancellationToken _)
-        //{
-        //    if (stream == null)
-        //    {
-        //        throw new InvalidOperationException();
-        //    }
-
-        //    if (stream is SslStream)
-        //    {
-        //        return Task.CompletedTask;
-        //    }
-
-        //    var sslStream = new SslStream(stream, false, ValidateRemoteCertificate);
-        //    sslStream.AuthenticateAsClient(endPoint.ToString());
-        //    stream = sslStream;
-
-        //    return Task.CompletedTask;
-        //}
-
-        private bool ValidateRemoteCertificate(object sender, X509Certificate certificate, X509Chain chain, SslPolicyErrors sslPolicyErrors)
-        {
-            if (ValidateAllCertificates)
-            {
-                return true;
-            }
-
-            var eventArgs = new RemoteCertificateValidationEventArgs(certificate, chain, sslPolicyErrors);
-            RemoteCertificateValidationRequired?.Invoke(eventArgs);
-
-            return eventArgs.IsValid;
-        }
-
-        private Stream GetStream()
-        {
-            if (stream == null)
-            {
-                stream = new NetworkStream(socket);
-            }
-
-            return stream;
         }
 
         private void SetEndpoint(EndPoint endPoint)
