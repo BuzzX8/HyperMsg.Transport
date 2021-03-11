@@ -1,19 +1,23 @@
-﻿using Microsoft.Extensions.Hosting;
+﻿using HyperMsg.Extensions;
+using System.Collections.Generic;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace HyperMsg.Http
 {
-    internal class HttpTransportService : MessagingObject, IHostedService
+    internal class HttpTransportService : MessagingService
     {
         private readonly HttpMessageInvoker messageInvoker;
 
         public HttpTransportService(HttpMessageInvoker messageInvoker, IMessagingContext messagingContext) : base(messagingContext)
         {
             this.messageInvoker = messageInvoker;
+        }
 
-            RegisterHandler<HttpRequestMessage>(HandleAsync);
+        protected override IEnumerable<System.IDisposable> GetDefaultDisposables()
+        {
+            yield return RegisterHandler<HttpRequestMessage>(HandleAsync);
         }
 
         private Task HandleAsync(HttpRequestMessage httpRequest, CancellationToken cancellationToken)
@@ -38,12 +42,8 @@ namespace HyperMsg.Http
                 return;
             }
 
-            Receive(response.Result);
-        }
-
-        public Task StartAsync(CancellationToken cancellationToken) => Task.CompletedTask;
-
-        public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+            this.Receive(response.Result);
+        }        
 
         public override void Dispose()
         {

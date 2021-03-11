@@ -111,8 +111,6 @@ namespace HyperMsg.Sockets
 
         public void Dispose()
         {
-            messageSender.Send(ConnectionCommand.Close);
-            messageSender.Send(ConnectionListeneningCommand.StopListening);
             host.Dispose();
             acceptedSocket?.Dispose();
         }

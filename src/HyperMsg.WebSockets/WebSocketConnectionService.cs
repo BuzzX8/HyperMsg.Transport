@@ -1,6 +1,8 @@
 ﻿using HyperMsg.Transport;
+using HyperMsg.Transport.Extensions;
 using Microsoft.Extensions.Hosting;
 using System;
+using System.Collections.Generic;
 using System.Net.WebSockets;
 using System.Threading;
 using System.Threading.Tasks;
@@ -16,20 +18,21 @@ namespace HyperMsg.WebSockets
         {
             this.webSocket = webSocket;
             this.uri = uri;
-            RegisterSetEndpointHandler<Uri>(SetEndpoint);
+            
         }
 
         internal ClientWebSocket WebSocket => webSocket;
 
-        public Task StartAsync(CancellationToken cancellationToken) => Task.CompletedTask;
-
-        public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+        protected override IEnumerable<IDisposable> GetDefaultDisposables()
+        {
+            yield return this.RegisterSetEndpointHandler<Uri>(SetEndpoint);
+        }
 
         protected override Task OpenConnectionAsync(CancellationToken cancellationToken)
         {
             if (uri == null)
             {
-                throw new InvalidOperationException("Endpoint does not provided.");
+                throw new TransportException("Endpoint does not provided.");
             }
             return webSocket.ConnectAsync(uri, cancellationToken);
         }

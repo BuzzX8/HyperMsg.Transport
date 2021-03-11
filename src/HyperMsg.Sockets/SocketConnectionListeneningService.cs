@@ -1,21 +1,21 @@
-﻿using HyperMsg.Transport;
-using Microsoft.Extensions.Hosting;
+﻿using HyperMsg.Extensions;
+using HyperMsg.Transport;
+using HyperMsg.Transport.Extensions;
 using System;
+using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
-using System.Threading;
 using System.Threading.Tasks;
 
 namespace HyperMsg.Sockets
 {
-    internal class SocketConnectionListeneningService : MessagingObject, IHostedService
+    internal class SocketConnectionListeneningService : MessagingService
     {
         private readonly Func<Socket> socketFactory;
-        private readonly EndPoint listeningEndpoint;
+        private EndPoint listeningEndpoint;
         private readonly int backlog;
                 
         private Socket listeningSocket;
-        private CancellationTokenSource tokenSource;
         private Task<Socket> currentAcceptTask;
 
         public SocketConnectionListeneningService(IMessagingContext messagingContext, Func<Socket> socketFactory, EndPoint listeningEndpoint, int backlog) : base(messagingContext)
@@ -23,14 +23,17 @@ namespace HyperMsg.Sockets
             this.socketFactory = socketFactory;
             this.listeningEndpoint = listeningEndpoint;
             this.backlog = backlog;
-
-            RegisterHandler(ConnectionListeneningCommand.StartListening, StartListening);
-            RegisterHandler(ConnectionListeneningCommand.StopListening, StopListening);
         }
 
-        public Task StartAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+        protected override IEnumerable<IDisposable> GetDefaultDisposables()
+        {
+            yield return this.RegisterHandler(ConnectionListeneningCommand.StartListening, StartListening);
+            yield return this.RegisterHandler(ConnectionListeneningCommand.StopListening, StopListening);
+            yield return this.RegisterSetEndpointHandler<EndPoint>(SetEndpoint);
+            yield return this.RegisterSetEndpointHandler<IPEndPoint>(SetEndpoint);
+        }
 
-        public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+        private void SetEndpoint(EndPoint listeningEndpoint) => this.listeningEndpoint = listeningEndpoint;
 
         private void StartListening()
         {
@@ -40,9 +43,8 @@ namespace HyperMsg.Sockets
             }
 
             listeningSocket = socketFactory.Invoke();
-            listeningSocket.Bind(listeningEndpoint);
+            listeningSocket.Bind(listeningEndpoint ?? throw new TransportException("Listening endpoint was not provided."));
             listeningSocket.Listen(backlog);
-            tokenSource = new();
             AcceptSocket();            
         }
 
@@ -51,7 +53,7 @@ namespace HyperMsg.Sockets
             currentAcceptTask = listeningSocket.AcceptAsync();
             currentAcceptTask.GetAwaiter().OnCompleted(() =>
             {
-                if (tokenSource.IsCancellationRequested)
+                if (!listeningSocket.Connected && !currentAcceptTask.IsCompletedSuccessfully)
                 {
                     return;
                 }
@@ -69,7 +71,9 @@ namespace HyperMsg.Sockets
                         acceptedSocket.Socket.Dispose();
                     }
                 }
-            });
+
+                AcceptSocket();
+            });            
         }
 
         private void StopListening()
@@ -78,10 +82,9 @@ namespace HyperMsg.Sockets
             {
                 return;
             }
-
-            tokenSource.Cancel();
+                        
             listeningSocket.Dispose();
-            listeningSocket = null;
+            listeningSocket = null;            
         }
 
         public override void Dispose()

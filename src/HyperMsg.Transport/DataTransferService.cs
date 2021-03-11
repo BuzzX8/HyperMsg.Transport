@@ -1,21 +1,27 @@
-﻿using System;
+﻿using HyperMsg.Extensions;
+using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace HyperMsg.Transport
 {
-    public abstract class DataTransferService : MessagingObject
+    public abstract class DataTransferService : MessagingService
     {
         protected DataTransferService(IMessagingContext messagingContext) : base(messagingContext)
         {
-            RegisterTransmitHandler<byte[]>(TransmitDataAsync);
-            RegisterTransmitHandler<ArraySegment<byte>>(TransmitDataAsync);
-            RegisterTransmitHandler<ReadOnlyMemory<byte>>(TransmitDataAsync);
+        }
 
-            RegisterHandler(ConnectionEvent.Opening, OnConnectionOpeningAsync);
-            RegisterHandler(ConnectionEvent.Opened, OnConnectionOpenedAsync);
-            RegisterHandler(ConnectionEvent.Closing, OnConnectionClosingAsync);
-            RegisterHandler(ConnectionEvent.Closed, OnConnectionClosedAsync);
+        protected override IEnumerable<IDisposable> GetDefaultDisposables()
+        {
+            yield return this.RegisterTransmitHandler<byte[]>(TransmitDataAsync);
+            yield return this.RegisterTransmitHandler<ArraySegment<byte>>(TransmitDataAsync);
+            yield return this.RegisterTransmitHandler<ReadOnlyMemory<byte>>(TransmitDataAsync);
+                         
+            yield return this.RegisterHandler(ConnectionEvent.Opening, OnConnectionOpeningAsync);
+            yield return this.RegisterHandler(ConnectionEvent.Opened, OnConnectionOpenedAsync);
+            yield return this.RegisterHandler(ConnectionEvent.Closing, OnConnectionClosingAsync);
+            yield return this.RegisterHandler(ConnectionEvent.Closed, OnConnectionClosedAsync);
         }
 
         private Task TransmitDataAsync(byte[] data, CancellationToken cancellationToken) => TransmitDataAsync(new ReadOnlyMemory<byte>(data), cancellationToken);

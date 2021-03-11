@@ -1,15 +1,13 @@
-﻿using HyperMsg.Transport;
-using Microsoft.Extensions.Hosting;
+﻿using HyperMsg.Extensions;
+using HyperMsg.Transport;
 using System;
 using System.Collections.Generic;
 using System.Net;
-using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
 
 namespace HyperMsg.Http
 {
-    public class HttpListenerService : MessagingObject, IHostedService
+    public class HttpListenerService : MessagingService
     {
         private readonly HttpListener httpListener;
         private Task<HttpListenerContext> currentListeningTask;
@@ -17,8 +15,6 @@ namespace HyperMsg.Http
         public HttpListenerService(IMessagingContext messagingContext, Uri[] listeningUris) : base(messagingContext)
         {
             httpListener = new HttpListener();
-            RegisterHandler(ConnectionListeneningCommand.StartListening, StartListening);
-            RegisterHandler(ConnectionListeneningCommand.StopListening, StopListening);
 
             foreach(var uri in listeningUris)
             {
@@ -26,14 +22,16 @@ namespace HyperMsg.Http
             }
         }
 
-        public Task StartAsync(CancellationToken cancellationToken) => Task.CompletedTask;
-
-        public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+        protected override IEnumerable<IDisposable> GetDefaultDisposables()
+        {
+            yield return this.RegisterHandler(ConnectionListeneningCommand.StartListening, StartListening);
+            yield return this.RegisterHandler(ConnectionListeneningCommand.StopListening, StopListening);
+        }
 
         private void StartListening()
         {
             httpListener.Start();
-            var currentListeningTask = httpListener.GetContextAsync();
+            currentListeningTask = httpListener.GetContextAsync();
             currentListeningTask.GetAwaiter().OnCompleted(() =>
             {
                 var context = currentListeningTask.Result;

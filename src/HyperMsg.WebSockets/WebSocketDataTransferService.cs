@@ -1,4 +1,5 @@
-﻿using HyperMsg.Transport;
+﻿using HyperMsg.Extensions;
+using HyperMsg.Transport;
 using Microsoft.Extensions.Hosting;
 using System;
 using System.Net.WebSockets;
@@ -20,10 +21,6 @@ namespace HyperMsg.WebSockets
             this.receivingBuffer = receivingBuffer;
         }
 
-        public Task StartAsync(CancellationToken cancellationToken) => Task.CompletedTask;
-
-        public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
-
         protected override async Task TransmitDataAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken) => await webSocket.SendAsync(buffer, WebSocketMessageType.Binary, false, cancellationToken);
 
         protected override Task OnConnectionOpenedAsync(CancellationToken cancellationToken)
@@ -40,7 +37,7 @@ namespace HyperMsg.WebSockets
             {
                 var result = currentReceiveTask.Result;
                 receivingBuffer.Writer.Advance(result.Count);
-                Receive(receivingBuffer);
+                this.Receive(receivingBuffer);
                 ReceiveAsync();
             });
         }

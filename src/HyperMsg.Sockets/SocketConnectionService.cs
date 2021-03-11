@@ -1,7 +1,9 @@
 ﻿using HyperMsg.Transport;
-using Microsoft.Extensions.Hosting;
+using HyperMsg.Transport.Extensions;
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Net.Security;
 using System.Net.Sockets;
@@ -11,7 +13,7 @@ using System.Threading.Tasks;
 
 namespace HyperMsg.Sockets
 {
-    internal class SocketConnectionService : ConnectionService, IHostedService
+    internal class SocketConnectionService : ConnectionService
     {
         private readonly Socket socket;
         private Lazy<EndPoint> endPoint;
@@ -21,9 +23,12 @@ namespace HyperMsg.Sockets
         {
             this.socket = socket ?? throw new ArgumentNullException(nameof(socket));
             endPoint = new Lazy<EndPoint>(endpointProvider) ?? throw new ArgumentNullException(nameof(endPoint));
-                        
-            RegisterSetEndpointHandler<EndPoint>(SetEndpoint);
-            RegisterSetEndpointHandler<IPEndPoint>(SetEndpoint);
+        }
+
+        protected override IEnumerable<IDisposable> GetDefaultDisposables()
+        {
+            return base.GetDefaultDisposables()
+                .Concat(new[] { this.RegisterSetEndpointHandler<EndPoint>(SetEndpoint), this.RegisterSetEndpointHandler<IPEndPoint>(SetEndpoint)});
         }
 
         public bool ValidateAllCertificates { get; }
@@ -36,9 +41,15 @@ namespace HyperMsg.Sockets
             {
                 return Task.CompletedTask;
             }
-                        
-            socket.Connect(endPoint.Value);
-            return Task.CompletedTask;
+
+            try
+            {
+                return Task.Run(() => socket.Connect(endPoint.Value), cancellationToken);
+            }
+            catch(SocketException e)
+            {
+                throw new TransportException(e.Message, e);
+            }
         }
 
         protected override Task CloseConnectionAsync(CancellationToken cancellationToken)
@@ -48,8 +59,8 @@ namespace HyperMsg.Sockets
                 return Task.CompletedTask;
             }                        
             
-            socket.Shutdown(SocketShutdown.Both);
-            socket.Close();
+            socket.Shutdown(SocketShutdown.Both);            
+            socket.Disconnect(true);
 
             return Task.CompletedTask;
         }        
@@ -108,10 +119,6 @@ namespace HyperMsg.Sockets
             base.Dispose();            
             socket.Dispose();
         }
-
-        public Task StartAsync(CancellationToken cancellationToken) => Task.CompletedTask;
-
-        public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
 
         public Action<RemoteCertificateValidationEventArgs> RemoteCertificateValidationRequired;
     }

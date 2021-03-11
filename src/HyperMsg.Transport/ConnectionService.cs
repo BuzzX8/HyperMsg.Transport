@@ -1,17 +1,23 @@
-﻿using HyperMsg.Transport.Extensions;
+﻿using HyperMsg.Extensions;
+using HyperMsg.Transport.Extensions;
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace HyperMsg.Transport
 {
-    public abstract class ConnectionService : MessagingObject
+    public abstract class ConnectionService : MessagingService
     {
         public ConnectionService(IMessagingContext messagingContext) : base(messagingContext)
         {
-            RegisterHandler(ConnectionCommand.Open, OpenConnection);
-            RegisterHandler(ConnectionCommand.Close, CloseConnection);
-            RegisterHandler(ConnectionCommand.SetTransportLevelSecurity, SetTransportLevelSecurityAsync);
+        }
+
+        protected override IEnumerable<IDisposable> GetDefaultDisposables()
+        {
+            yield return this.RegisterHandler(ConnectionCommand.Open, OpenConnection);
+            yield return this.RegisterHandler(ConnectionCommand.Close, CloseConnection);
+            yield return this.RegisterHandler(ConnectionCommand.SetTransportLevelSecurity, SetTransportLevelSecurityAsync);
         }
 
         private async Task OpenConnection(CancellationToken cancellationToken)
@@ -33,9 +39,5 @@ namespace HyperMsg.Transport
         protected abstract Task CloseConnectionAsync(CancellationToken cancellationToken);
 
         protected virtual Task SetTransportLevelSecurityAsync(CancellationToken cancellationToken) => Task.CompletedTask;
-
-        protected void RegisterSetEndpointHandler<TEndpoint>(Action<TEndpoint> setEndpointHandler) => RegisterDisposable(HandlerRegistry.RegisterSetEndpointHandler(setEndpointHandler));
-
-        protected void RegisterSetEndpointHandler<TEndpoint>(AsyncAction<TEndpoint> setEndpointHandler) => RegisterDisposable(HandlerRegistry.RegisterSetEndpointHandler(setEndpointHandler));
     }
 }

@@ -25,6 +25,8 @@ namespace HyperMsg.Sockets.Extensions
 
         private static EndPoint DefaultProvider() => throw new InvalidOperationException("End point does not provided.");
 
+        public static IServiceCollection AddSocketConnection(this IServiceCollection services) => services.AddSocketServices();
+
         public static IServiceCollection AddSocketConnection(this IServiceCollection services, string hostName, int port)
         {
             return services.AddSocketServices(() =>
@@ -38,7 +40,7 @@ namespace HyperMsg.Sockets.Extensions
 
         public static IServiceCollection AddLocalSocketConnection(this IServiceCollection services, int port) => services.AddSocketConnection(IPAddress.Loopback, port);
 
-        public static IServiceCollection AddSocketConnectionListener(this IServiceCollection services, EndPoint listeningEndpoint, int backlog = 1)
+        public static IServiceCollection AddSocketConnectionListener(this IServiceCollection services, EndPoint listeningEndpoint = null, int backlog = 1)
         {
             return services.AddHostedService(provider =>
             {
