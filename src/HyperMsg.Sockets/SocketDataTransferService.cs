@@ -80,8 +80,10 @@ namespace HyperMsg.Sockets
 
         private void OnSocketReceiveCompleted(object sender, SocketAsyncEventArgs eventArgs)
         {
-            if (eventArgs.SocketError != SocketError.Success && !socket.Connected)
+            if (!socket.Connected)
             {
+                socket.Disconnect(true);
+                Send(ConnectionEvent.Closed);
                 return;
             }
 
@@ -102,20 +104,10 @@ namespace HyperMsg.Sockets
                 return;
             }
 
-            if (!socket.Connected)
-            {
-                socket.Disconnect(true);
-                Send(ConnectionEvent.Closed);
-                return;
-            }
-
             Debugger.Launch();
         }
 
-        private void ResetBuffer()
-        {
-            eventArgs.SetBuffer(Array.Empty<byte>(), 0, 0);
-        }
+        private void ResetBuffer() => eventArgs.SetBuffer(Array.Empty<byte>(), 0, 0);
 
         protected override Task OnConnectionClosingAsync(CancellationToken _)
         {

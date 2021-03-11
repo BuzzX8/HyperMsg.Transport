@@ -103,7 +103,7 @@ namespace HyperMsg.Sockets
         }
 
         [Fact]
-        public async Task SetTls_()
+        public async Task SetTransportLevelSecurity_Establishes_Ssl_Stream()
         {
             await OpenConnectionAsync();
 
