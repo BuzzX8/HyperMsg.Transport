@@ -2,12 +2,9 @@
 using HyperMsg.Transport.Extensions;
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Net;
-using System.Net.Security;
 using System.Net.Sockets;
-using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -17,7 +14,6 @@ namespace HyperMsg.Sockets
     {
         private readonly Socket socket;
         private Lazy<EndPoint> endPoint;
-        private Stream stream;
 
         public SocketConnectionService(IMessagingContext messagingContext, Socket socket, Func<EndPoint> endpointProvider) : base(messagingContext)
         {
@@ -30,8 +26,6 @@ namespace HyperMsg.Sockets
             return base.GetDefaultDisposables()
                 .Concat(new[] { this.RegisterSetEndpointHandler<EndPoint>(SetEndpoint), this.RegisterSetEndpointHandler<IPEndPoint>(SetEndpoint)});
         }
-
-        public bool ValidateAllCertificates { get; }
 
         private bool IsOpen => socket.Connected;
 
@@ -65,10 +59,7 @@ namespace HyperMsg.Sockets
             return Task.CompletedTask;
         }
 
-        private void SetEndpoint(EndPoint endPoint)
-        {
-            this.endPoint = new Lazy<EndPoint>(() => endPoint);
-        }
+        private void SetEndpoint(EndPoint endPoint) => this.endPoint = new Lazy<EndPoint>(() => endPoint);
 
         private void SetEndpoint(IPEndPoint endPoint) => this.endPoint = new Lazy<EndPoint>(() => endPoint);
 
@@ -77,7 +68,5 @@ namespace HyperMsg.Sockets
             base.Dispose();            
             socket.Dispose();
         }
-
-        public Action<RemoteCertificateValidationEventArgs> RemoteCertificateValidationRequired;
     }
 }

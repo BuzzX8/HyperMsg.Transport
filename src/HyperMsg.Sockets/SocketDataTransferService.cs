@@ -128,7 +128,7 @@ namespace HyperMsg.Sockets
             }
 
             var sslStream = new SslStream(stream, false, ValidateRemoteCertificate);
-            await sslStream.AuthenticateAsClientAsync(socket.RemoteEndPoint.ToString());
+            //sslStream.AuthenticateAsClient(socket.RemoteEndPoint.ToString());
             stream = sslStream;
 
             return;
